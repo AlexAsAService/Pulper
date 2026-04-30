@@ -1,0 +1,3 @@
+# markitdown
+# TODO: pin to exact version with --require-hashes once confirmed
+markitdown

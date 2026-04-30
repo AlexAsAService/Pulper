@@ -1,0 +1,16 @@
+# Pulper — Local Development Compose
+# Provides a repeatable local test loop without installing Python on the host.
+#
+# Usage:
+#   docker compose run --rm pulper /input/sample.pdf -o /output/sample.md
+
+services:
+  pulper:
+    build:
+      context: .
+      target: minimal          # swap to 'full' for extended deps
+    image: pulper:dev
+    volumes:
+      - ./input:/input:ro      # read-only source material
+      - ./output:/output       # generated artifacts
+    # Pass args via: docker compose run --rm pulper <args>

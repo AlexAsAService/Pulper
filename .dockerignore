@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# GitHub / CI config — not needed in image
+.github
+
+# Local dev
+.env
+.env.*
+compose.yaml
+docker-compose.yml
+
+# Test artifacts and sample data
+tests/
+input/
+output/
+*.md
+
+# Python cruft
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.egg-info
+.venv
+venv
+dist
+build

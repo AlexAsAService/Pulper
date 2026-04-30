@@ -1,0 +1,29 @@
+# Pulper — .gitignore
+
+# Local env overrides
+.env
+
+# Dev I/O directories (content is transient; dirs tracked via .gitkeep)
+input/*
+!input/.gitkeep
+output/*
+!output/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
