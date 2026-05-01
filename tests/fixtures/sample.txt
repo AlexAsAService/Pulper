@@ -1,0 +1,10 @@
+# Simple Text Document
+
+This is a plain text file. 
+It has some basic structure that markitdown should preserve or normalize.
+
+1. First
+2. Second
+3. Third
+
+End of file.

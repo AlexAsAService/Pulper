@@ -14,6 +14,7 @@ services:
         - GROUP_ID=${GID:-1000}
     image: pulper:dev
     volumes:
-      - ./input:/input:ro      # read-only source material
-      - ./output:/output       # generated artifacts
+      - ./input:/input:ro             # read-only source material
+      - ./tests/fixtures:/fixtures:ro # test fixtures
+      - ./output:/output              # generated artifacts
     # Pass args via: docker compose run --rm pulper <args>
