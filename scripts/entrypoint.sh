@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
 # entrypoint.sh — Handles UID/GID mapping for bind-mounted volumes
 #
-# This script runs as root, adjusts the 'pulper' user to match the 
-# host's UID/GID (detected from the /output volume), and then 
-# drops privileges to run the actual command.
+# This script adjusts the 'pulper' user to match the host's UID/GID 
+# (detected from the /output volume) and then drops privileges.
 
 set -euo pipefail
+
+# BAIL FAST: If we are already non-root, we can't (and don't need to) 
+# do any of the user/group modification logic. Just exec the command.
+if [ "$(id -u)" != "0" ]; then
+    exec "$@"
+fi
+
+# ---------------------------------------------------------------------------
+# If we reached here, we are running as ROOT. 
+# ---------------------------------------------------------------------------
 
 # If the /output volume is mounted, try to match its ownership
 if [ -d "/output" ]; then
@@ -23,10 +32,4 @@ if [ -d "/output" ]; then
 fi
 
 # Use gosu to drop from root to pulper and exec the original command
-# This ensures the process is PID 1 and signals are handled correctly
-if [ "$(id -u)" = "0" ]; then
-    exec gosu pulper "$@"
-else
-    # We are already non-root, just exec
-    exec "$@"
-fi
+exec gosu pulper "$@"
