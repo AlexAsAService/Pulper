@@ -13,7 +13,9 @@
 # ---------------------------------------------------------------------------
 # Base stage — shared foundation
 # ---------------------------------------------------------------------------
-FROM python:3.12-slim AS base
+# Allow swapping the base image (e.g., for Distroless in prod)
+ARG BASE_IMAGE=python:3.12-slim
+FROM ${BASE_IMAGE} AS base
 
 # Metadata
 LABEL org.opencontainers.image.title="Pulper" \
@@ -26,9 +28,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# Build-time identity for volume permissions (defaults to 1001)
+ARG USER_ID=1001
+ARG GROUP_ID=1001
+
 # Non-root user for safe execution
-RUN groupadd --gid 1001 pulper \
- && useradd  --uid 1001 --gid pulper --shell /bin/bash --create-home pulper
+RUN groupadd --gid ${GROUP_ID} pulper \
+ && useradd  --uid ${USER_ID} --gid pulper --shell /bin/bash --create-home pulper
+
+# Install system runtime dependencies and gosu for the shim stage
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    gosu \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -37,9 +49,10 @@ WORKDIR /app
 # ---------------------------------------------------------------------------
 FROM base AS deps
 
-# TODO: pin exact versions in requirements.txt once confirmed
 COPY requirements.txt ./
-RUN pip install --require-hashes -r requirements.txt
+RUN pip install -r requirements.txt
+# TODO: pin exact versions in requirements.txt once confirmed
+#RUN pip install --require-hashes -r requirements.txt
 
 # ---------------------------------------------------------------------------
 # minimal — CLI image with core MarkItDown only
@@ -69,3 +82,16 @@ FROM minimal AS full
 #  && rm -rf /var/lib/apt/lists/*
 
 USER pulper
+
+# ---------------------------------------------------------------------------
+# shim — "It just works" stage with automatic UID/GID mapping
+# ---------------------------------------------------------------------------
+FROM minimal AS shim
+
+USER root
+
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["entrypoint.sh", "markitdown"]
+CMD ["--help"]

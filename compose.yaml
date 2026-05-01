@@ -8,7 +8,10 @@ services:
   pulper:
     build:
       context: .
-      target: minimal          # swap to 'full' for extended deps
+      target: shim             # 'shim' for auto-UID mapping, 'minimal' for rootless, 'full' for OCR
+      args:
+        - USER_ID=${UID:-1000}
+        - GROUP_ID=${GID:-1000}
     image: pulper:dev
     volumes:
       - ./input:/input:ro      # read-only source material
