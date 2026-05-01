@@ -5,7 +5,7 @@
 # host's UID/GID (detected from the /output volume), and then 
 # drops privileges to run the actual command.
 
-set -e
+set -euo pipefail
 
 # If the /output volume is mounted, try to match its ownership
 if [ -d "/output" ]; then
