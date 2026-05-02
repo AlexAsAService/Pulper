@@ -14,6 +14,7 @@ runs:
       env:
         TEST_IMAGE: ${{ inputs.image }}
         OUTPUT_DIR: ./output
+        TARGET_DIR: /${{ inputs.target }}
       run: |
         set -euo pipefail
         ./scripts/smoke.sh "$TEST_IMAGE"

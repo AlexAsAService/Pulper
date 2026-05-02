@@ -70,7 +70,7 @@ if [[ "$1" == "markitdown" ]]; then
                 soffice --headless --convert-to docx --outdir "$TEMP_DIR" "$INPUT_PATH" >/dev/null 2>&1
                 CLEAN_PATH=$(find "$TEMP_DIR" -name "*.docx" | head -n 1)
                 ;;
-            xls|ods)
+            ods)
                 echo "==> Transpiling legacy spreadsheet ($EXT_LC) to xlsx..." >&2
                 soffice --headless --convert-to xlsx --outdir "$TEMP_DIR" "$INPUT_PATH" >/dev/null 2>&1
                 CLEAN_PATH=$(find "$TEMP_DIR" -name "*.xlsx" | head -n 1)

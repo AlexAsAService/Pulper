@@ -26,6 +26,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Install system runtime dependencies and gosu for the shim stage
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gosu \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # NOTE: I think the entrypoint is creating the user and making sure it has a group that allows
@@ -97,7 +98,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     tesseract-ocr-eng \
     libmagic1 \
-    ffmpeg \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

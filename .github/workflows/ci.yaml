@@ -33,3 +33,4 @@ jobs:
         uses: ./.github/actions/smoke-test
         with:
           image: ${{ steps.build.outputs.image-ref }}
+          target: ${{ matrix.target }}
