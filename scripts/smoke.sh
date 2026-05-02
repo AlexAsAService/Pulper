@@ -4,49 +4,58 @@
 # Usage:
 #   ./scripts/smoke.sh [IMAGE_TAG]
 #
-# Defaults to pulper:minimal if no tag is given.
-# Expects a sample file at tests/fixtures/sample.pdf (or similar).
-#
-# Exit codes:
-#   0 — conversion produced non-empty output
-#   1 — conversion failed or produced empty output
+# Defaults to pulper:dev if no tag is given.
 
 set -euo pipefail
 
 IMAGE="${1:-pulper:dev}"
 FIXTURES_DIR="$(cd "$(dirname "$0")/../tests/fixtures" && pwd)"
-OUTPUT_DIR="$(mktemp -d)"
-trap 'rm -rf "$OUTPUT_DIR"' EXIT
+OUTPUT_DIR="${OUTPUT_DIR:-}"
+if [[ -z "$OUTPUT_DIR" ]]; then
+    OUTPUT_DIR="$(mktemp -d)"
+    trap 'rm -rf "$OUTPUT_DIR"' EXIT
+fi
 
-echo "==> Smoke test: $IMAGE"
+echo "==> Starting Smoke Tests"
+echo "    Image    : $IMAGE"
 echo "    Fixtures : $FIXTURES_DIR"
 echo "    Output   : $OUTPUT_DIR"
+echo "--------------------------------------------------"
 
-# Use the HTML fixture since we can't easily generate PDFs in the repo
-SAMPLE_NAME="sample.html"
-SAMPLE="$FIXTURES_DIR/$SAMPLE_NAME"
-RESULT_NAME="sample.md"
+# Function to test a single file
+test_file() {
+    local input_file="$1"
+    local filename=$(basename "$input_file")
+    local result_name="${filename%.*}.md"
+    local result_path="$OUTPUT_DIR/$result_name"
 
-if [[ ! -f "$SAMPLE" ]]; then
-  echo "ERROR: sample fixture not found at $SAMPLE" >&2
-  exit 1
-fi
+    echo "Testing: $filename..."
 
-docker run --rm \
-  -v "$FIXTURES_DIR:/input:ro" \
-  -v "$OUTPUT_DIR:/output" \
-  "$IMAGE" \
-  "/input/$SAMPLE_NAME" -o "/output/$RESULT_NAME"
+    # Run the conversion
+    docker run --rm \
+      -v "$FIXTURES_DIR:/input:ro" \
+      -v "$OUTPUT_DIR:/output" \
+      "$IMAGE" \
+      "/input/$filename" -o "/output/$result_name"
 
-RESULT="$OUTPUT_DIR/$RESULT_NAME"
+    # Validation
+    if [[ ! -s "$result_path" ]]; then
+        echo "  FAILED: Output file is missing or empty" >&2
+        return 1
+    fi
 
-if [[ ! -s "$RESULT" ]]; then
-  echo "FAIL: output file is missing or empty" >&2
-  exit 1
-fi
+    echo "  PASSED: $(wc -c < "$result_path") bytes written to $result_name"
+    return 0
+}
 
-echo "--- Output Preview ---"
-head -n 20 "$RESULT"
-echo "----------------------"
+# Run tests for all files in the fixtures directory (excluding hidden files and README)
+find "$FIXTURES_DIR" -maxdepth 1 -type f ! -name ".*" ! -name "README.md" | while read -r fixture; do
+    if ! test_file "$fixture"; then
+        echo "--------------------------------------------------"
+        echo "SMOKE TEST FAILED"
+        exit 1
+    fi
+done
 
-echo "PASS: output written to $RESULT ($(wc -c < "$RESULT") bytes)"
+echo "--------------------------------------------------"
+echo "ALL SMOKE TESTS PASSED"
