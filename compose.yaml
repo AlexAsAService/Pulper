@@ -10,8 +10,8 @@ services:
       context: .
       target: full             # 'shim' for auto-UID mapping, 'minimal' for rootless, 'full' for OCR
       args:
-        - USER_ID=${UID:-1000}
-        - GROUP_ID=${GID:-1000}
+        - USER_ID=${UID:-99999999}
+        - GROUP_ID=${GID:-99999999}
     image: pulper:dev
     volumes:
       - ./input:/input:ro             # read-only source material

@@ -28,14 +28,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gosu \
     && rm -rf /var/lib/apt/lists/*
 
+# NOTE: I think the entrypoint is creating the user and making sure it has a group that allows
+# access to the output and input volumes
+# This was needed for the non-shim version, which has been
+# eroded away.  may need to bring this back if we want to offer
+# non-shim versions again.
+
 # Build-time identity for volume permissions (defaults to 1001)
 # Don't we want to default to something less likely to overlap with a real user on the host?
-ARG USER_ID=1001
-ARG GROUP_ID=1001
+
+# ARG USER_ID=1001
+# ARG GROUP_ID=1001
 
 # Non-root user for safe execution
-RUN groupadd --gid ${GROUP_ID} pulper \
- && useradd  --uid ${USER_ID} --gid pulper --shell /bin/bash --create-home pulper
+
+# RUN groupadd --gid ${GROUP_ID} pulper \
+#  && useradd  --uid ${USER_ID} --gid pulper --shell /bin/bash --create-home pulper
 
 # Metadata
 LABEL org.opencontainers.image.title="Pulper" \
@@ -67,7 +75,7 @@ VOLUME ["/input", "/output"]
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-USER pulper
+# USER pulper
 
 # We should have a minimal entrypoint here cause we don't need to do transpilations
 ENTRYPOINT ["entrypoint.sh", "markitdown"]
@@ -97,10 +105,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-USER pulper
-
-ENTRYPOINT ["entrypoint.sh", "markitdown"]
-
+# USER pulper
 
 # ---------------------------------------------------------------------------
 # shim — "It just works" stage with automatic UID/GID mapping
