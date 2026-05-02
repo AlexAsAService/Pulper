@@ -7,11 +7,11 @@ A clean, production-minded containerization of Microsoft MarkItDown for converti
 Modern AI and automation workflows often need to turn messy source documents into plain text or Markdown before indexing, summarizing, embedding, or handing content to agents. Installing document conversion tooling directly on a workstation or server can be inconsistent and fragile. This project packages the conversion workflow into a repeatable container interface with sane defaults, clean volume boundaries, and documented usage patterns.
 
 ## Core Capabilities
-- Convert supported documents into Markdown
-- Handle common input formats such as PDF, DOCX, PPTX, XLSX, HTML, CSV, JSON, images, audio, and ZIP archives where supported by the underlying toolchain
-- Run as a local CLI container with bind-mounted input and output directories
-- Provide predictable file ownership and output paths
-- Support future expansion into an HTTP API or batch-processing service
+- **Universal Markdown Conversion**: Converts modern formats (`.docx`, `.xlsx`, `.pptx`) and legacy formats (`.doc`, `.xls`, `.ppt`, `.rtf`, `.odt`, `.ods`, `.odp`) into clean Markdown.
+- **Auto-Transpilation**: Transparently uses LibreOffice to modernize legacy documents before conversion.
+- **Audio Normalization**: Automatically normalizes audio files (PCM, Bitrate) via FFmpeg to ensure compatibility with transcription engines.
+- **Portable & Secure**: Automatic UID/GID mapping ensures "It Just Works" on any host without permission headaches, while strictly running as a non-root user.
+- **Predictable Interface**: Simple `/input` and `/output` volume mapping.
 
 ## Primary Interface
 - CLI-first container execution

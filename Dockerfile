@@ -17,45 +17,53 @@
 ARG BASE_IMAGE=python:3.12-slim
 FROM ${BASE_IMAGE} AS base
 
-# Metadata
-LABEL org.opencontainers.image.title="Pulper" \
-      org.opencontainers.image.description="Containerized document-to-Markdown conversion via MarkItDown" \
-      org.opencontainers.image.source="https://github.com/AlexAsAService/Pulper"
-
 # Reproducible installs — no cache pollution
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Build-time identity for volume permissions (defaults to 1001)
-ARG USER_ID=1001
-ARG GROUP_ID=1001
-
-# Non-root user for safe execution
-RUN groupadd --gid ${GROUP_ID} pulper \
- && useradd  --uid ${USER_ID} --gid pulper --shell /bin/bash --create-home pulper
-
 # Install system runtime dependencies and gosu for the shim stage
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
     gosu \
- && rm -rf /var/lib/apt/lists/*
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# NOTE: I think the entrypoint is creating the user and making sure it has a group that allows
+# access to the output and input volumes
+# This was needed for the non-shim version, which has been
+# eroded away.  may need to bring this back if we want to offer
+# non-shim versions again.
+
+# Build-time identity for volume permissions (defaults to 1001)
+# Don't we want to default to something less likely to overlap with a real user on the host?
+
+# ARG USER_ID=1001
+# ARG GROUP_ID=1001
+
+# Non-root user for safe execution
+
+# RUN groupadd --gid ${GROUP_ID} pulper \
+#  && useradd  --uid ${USER_ID} --gid pulper --shell /bin/bash --create-home pulper
+
+# Metadata
+LABEL org.opencontainers.image.title="Pulper" \
+      org.opencontainers.image.description="Containerized document-to-Markdown conversion via MarkItDown" \
+      org.opencontainers.image.source="https://github.com/AlexAsAService/Pulper"
 
 WORKDIR /app
 
+
 # ---------------------------------------------------------------------------
-# deps stage — install Python dependencies
+# deps — builder stage
 # ---------------------------------------------------------------------------
 FROM base AS deps
 
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
-# TODO: pin exact versions in requirements.txt once confirmed
-#RUN pip install --require-hashes -r requirements.txt
 
 # ---------------------------------------------------------------------------
-# minimal — CLI image with core MarkItDown only
+# minimal — production-ready rootless stage
 # ---------------------------------------------------------------------------
 FROM base AS minimal
 
@@ -65,33 +73,47 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 # Input is always read-only source material; output is the artifact directory
 VOLUME ["/input", "/output"]
 
-USER pulper
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Default: convert first arg, write to /output
-ENTRYPOINT ["markitdown"]
+# USER pulper
+
+# We should have a minimal entrypoint here cause we don't need to do transpilations
+ENTRYPOINT ["entrypoint.sh", "markitdown"]
 CMD ["--help"]
 
 # ---------------------------------------------------------------------------
-# full — extended image with optional native dependencies
+# full — extended image with optional native dependencies (OCR, Office)
 # ---------------------------------------------------------------------------
 FROM minimal AS full
 
-# TODO: add native deps as needed (e.g., tesseract, ffmpeg, libreoffice)
-# RUN apt-get update && apt-get install -y --no-install-recommends \
-#     tesseract-ocr \
-#  && rm -rf /var/lib/apt/lists/*
+USER root
 
-USER pulper
+# Install LibreOffice (Headless) and Tesseract OCR
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice-writer \
+    libreoffice-calc \
+    libreoffice-impress \
+    python3-uno \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    libmagic1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# We should have a full version of the entrypoint script here with the logic to transpile
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# USER pulper
 
 # ---------------------------------------------------------------------------
 # shim — "It just works" stage with automatic UID/GID mapping
 # ---------------------------------------------------------------------------
-FROM minimal AS shim
+# We aren't offering non-shim version anymore so this is superfluous at this point
+# Maybe we should come back to this and rework to where we can build non-shim versions again
+FROM full AS shim
 
 USER root
-
-COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-ENTRYPOINT ["entrypoint.sh", "markitdown"]
+# (Inherits entrypoint and logic from base)
 CMD ["--help"]

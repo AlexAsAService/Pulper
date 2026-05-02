@@ -9,6 +9,10 @@ input/*
 output/*
 !output/.gitkeep
 
+tests/fixtures/unsupported/*
+.dontcommit/
+.antigravity/
+
 # Python
 __pycache__/
 *.pyc
