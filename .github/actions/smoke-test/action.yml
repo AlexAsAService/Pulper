@@ -13,6 +13,7 @@ runs:
       shell: bash
       env:
         TEST_IMAGE: ${{ inputs.image }}
+        OUTPUT_DIR: ./output
       run: |
         set -euo pipefail
         ./scripts/smoke.sh "$TEST_IMAGE"
