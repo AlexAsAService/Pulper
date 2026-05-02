@@ -40,22 +40,24 @@ RUN groupadd --gid ${GROUP_ID} pulper \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     gosu \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 WORKDIR /app
+ENTRYPOINT ["entrypoint.sh", "markitdown"]
 
 # ---------------------------------------------------------------------------
-# deps stage — install Python dependencies
+# deps — builder stage
 # ---------------------------------------------------------------------------
 FROM base AS deps
 
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
-# TODO: pin exact versions in requirements.txt once confirmed
-#RUN pip install --require-hashes -r requirements.txt
 
 # ---------------------------------------------------------------------------
-# minimal — CLI image with core MarkItDown only
+# minimal — production-ready rootless stage
 # ---------------------------------------------------------------------------
 FROM base AS minimal
 
@@ -67,31 +69,34 @@ VOLUME ["/input", "/output"]
 
 USER pulper
 
-# Default: convert first arg, write to /output
-ENTRYPOINT ["markitdown"]
 CMD ["--help"]
 
 # ---------------------------------------------------------------------------
-# full — extended image with optional native dependencies
+# full — extended image with optional native dependencies (OCR, Office)
 # ---------------------------------------------------------------------------
 FROM minimal AS full
 
-# TODO: add native deps as needed (e.g., tesseract, ffmpeg, libreoffice)
-# RUN apt-get update && apt-get install -y --no-install-recommends \
-#     tesseract-ocr \
-#  && rm -rf /var/lib/apt/lists/*
+USER root
+
+# Install LibreOffice (Headless) and Tesseract OCR
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreoffice-writer \
+    libreoffice-calc \
+    libreoffice-impress \
+    python3-uno \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    libmagic1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 USER pulper
 
 # ---------------------------------------------------------------------------
 # shim — "It just works" stage with automatic UID/GID mapping
 # ---------------------------------------------------------------------------
-FROM minimal AS shim
+FROM full AS shim
 
 USER root
-
-COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-ENTRYPOINT ["entrypoint.sh", "markitdown"]
+# (Inherits entrypoint and logic from base)
 CMD ["--help"]
