@@ -8,11 +8,8 @@ services:
   pulper:
     build:
       context: .
-      target: full             # 'shim' for auto-UID mapping, 'minimal' for rootless, 'full' for OCR
-      args:
-        - USER_ID=${UID:-99999999}
-        - GROUP_ID=${GID:-99999999}
-    image: pulper:dev
+      target: ${STAGE:-full}
+    image: pulper:${STAGE:-full}
     volumes:
       - ./input:/input:ro             # read-only source material
       - ./tests/fixtures:/fixtures:ro # test fixtures

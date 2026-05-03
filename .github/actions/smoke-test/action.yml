@@ -16,9 +16,9 @@ runs:
     - name: Run Smoke Test
       shell: bash
       env:
-        TEST_IMAGE: ${{ inputs.image }}
+        STAGE: ${{ inputs.target }}
+        IMAGE: ${{ inputs.image }}
         OUTPUT_DIR: ./output
-        TARGET_DIR: /${{ inputs.target }}
       run: |
         set -euo pipefail
-        ./scripts/smoke.sh "$TEST_IMAGE"
+        ./scripts/smoke.sh "$IMAGE"
