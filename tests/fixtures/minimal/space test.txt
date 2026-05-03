@@ -1,0 +1,6 @@
+Testing spaces
+This file tests the entrypoint.sh script file processing with a filename that contains spaces.
+It should produce a file called "space test.md" in the mounted output directory.
+
+NOTE: This works with minimal for now but eventually minimal won't be doing transpilations, and entrypoint.sh will become a golang binary.
+We will need to update this text to reflect what's really happening once that is achieved.

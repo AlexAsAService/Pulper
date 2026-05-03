@@ -8,18 +8,22 @@
 
 set -euo pipefail
 
-IMAGE="${1:-pulper:dev}"
-FIXTURES_DIR="$(cd "$(dirname "$0")/../tests/fixtures" && pwd)"
-TARGET_DIR="${TARGET_DIR:-}"
+STAGE="${STAGE:-full}"
+IMAGE="${1:-pulper:${STAGE}}"
+FIXTURES_DIR="$(cd "$(dirname "$0")/../tests/fixtures/${STAGE}" && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-}"
 if [[ -z "$OUTPUT_DIR" ]]; then
     OUTPUT_DIR="$(mktemp -d)"
     trap 'rm -rf "$OUTPUT_DIR"' EXIT
 fi
 
+# Ensure output directory exists before Docker mounts it
+mkdir -p "$OUTPUT_DIR"
+
 echo "==> Starting Smoke Tests"
 echo "    Image    : $IMAGE"
-echo "    Fixtures : $FIXTURES_DIR"
+echo "    Stage    : $STAGE"
+echo "    Fixtures : tests/fixtures/$STAGE"
 echo "    Output   : $OUTPUT_DIR"
 echo "--------------------------------------------------"
 
@@ -34,7 +38,7 @@ test_file() {
 
     # Run the conversion
     docker run --rm \
-      -v "${FIXTURES_DIR}${TARGET_DIR}:/input:ro" \
+      -v "$FIXTURES_DIR:/input:ro" \
       -v "$OUTPUT_DIR:/output" \
       "$IMAGE" \
       "/input/$filename" -o "/output/$result_name"
@@ -50,7 +54,7 @@ test_file() {
 }
 
 # Run tests for all files in the fixtures directory (excluding hidden files and README)
-find "${FIXTURES_DIR}${TARGET_DIR}" -maxdepth 1 -type f ! -name ".*" ! -name "README.md" | while read -r fixture; do
+find "$FIXTURES_DIR" -maxdepth 1 -type f ! -name ".*" ! -name "README.md" -print0 | while IFS= read -r -d '' fixture; do
     if ! test_file "$fixture"; then
         echo "--------------------------------------------------"
         echo "SMOKE TEST FAILED"
