@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action
 name: 'Pulper Smoke Test'
 description: 'Runs the smoke test script against a specific Pulper image'
 
@@ -5,7 +6,7 @@ inputs:
   image:
     description: 'The full image name/tag to test'
     required: true
-  rget:
+  target:
     description: 'The build target (full or minimal)'
     required: true
 
