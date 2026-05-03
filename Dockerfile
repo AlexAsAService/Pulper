@@ -17,11 +17,17 @@
 ARG BASE_IMAGE=python:3.12-slim
 FROM ${BASE_IMAGE} AS base
 
-# Reproducible installs — no cache pollution
+# Python & Pip Configuration:
+# - PYTHONDONTWRITEBYTECODE: Prevent .pyc files (keep image clean)
+# - PYTHONUNBUFFERED: Real-time logging (no stdout/stderr buffering)
+# - PIP_NO_CACHE_DIR: Reduce image size by skipping pip cache
+# - PIP_DISABLE_PIP_VERSION_CHECK: Silence noisy update warnings
+# - ORT_LOGGING_LEVEL: Silence ONNX hardware discovery warnings (Level 3 = ERROR)
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    ORT_LOGGING_LEVEL=3
 
 # Install system runtime dependencies and gosu for the shim stage
 RUN apt-get update && apt-get install -y --no-install-recommends \
