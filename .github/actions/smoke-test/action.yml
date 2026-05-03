@@ -5,6 +5,9 @@ inputs:
   image:
     description: 'The full image name/tag to test'
     required: true
+  rget:
+    description: 'The build target (full or minimal)'
+    required: true
 
 runs:
   using: "composite"
