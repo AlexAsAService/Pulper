@@ -2,20 +2,25 @@
 # Pulper — Containerized Document-to-Markdown Conversion
 # =============================================================================
 # Build targets:
-#   minimal  — core MarkItDown conversion only
-#   full     — extended with optional native deps (OCR, audio, etc.)
-#
-# Usage:
-#   docker build --target minimal -t pulper:minimal .
-#   docker build --target full    -t pulper:full    .
+#   minimal-no-shim  — Core MarkItDown + Go Classifier (direct binary)
+#   minimal-shim     — Core MarkItDown + Go Classifier (w/ UID/GID mapping)
+#   full-no-shim     — Adds FFmpeg/Office/OCR (direct binary)
+#   full-shim        — Adds FFmpeg/Office/OCR (w/ UID/GID mapping)
 # =============================================================================
 
 # ---------------------------------------------------------------------------
-# Base stage — shared foundation
+# Stage 1: Build the Go Classifier
 # ---------------------------------------------------------------------------
-# Allow swapping the base image (e.g., for Distroless in prod)
-ARG BASE_IMAGE=python:3.12-slim
-FROM ${BASE_IMAGE} AS base
+FROM golang:1.26-alpine AS go-builder
+WORKDIR /build
+COPY ./cmd ./cmd
+COPY go.mod ./
+RUN go build -o classifier ./cmd/classifier
+
+# ---------------------------------------------------------------------------
+# Stage 2: Base Python Environment
+# ---------------------------------------------------------------------------
+FROM python:3.12-slim AS base
 
 # Python & Pip Configuration:
 # - PYTHONDONTWRITEBYTECODE: Prevent .pyc files (keep image clean)
@@ -27,75 +32,32 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    ORT_LOGGING_LEVEL=3
+    ORT_LOGGING_LEVEL=3 \
+    PATH="/usr/local/bin:$PATH"
 
-# Install system runtime dependencies and gosu for the shim stage
+# Install shared runtime dependencies (ffmpeg is needed by markitdown)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gosu \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# NOTE: I think the entrypoint is creating the user and making sure it has a group that allows
-# access to the output and input volumes
-# This was needed for the non-shim version, which has been
-# eroded away.  may need to bring this back if we want to offer
-# non-shim versions again.
-
-# Build-time identity for volume permissions (defaults to 1001)
-# Don't we want to default to something less likely to overlap with a real user on the host?
-
-# ARG USER_ID=1001
-# ARG GROUP_ID=1001
-
-# Non-root user for safe execution
-
-# RUN groupadd --gid ${GROUP_ID} pulper \
-#  && useradd  --uid ${USER_ID} --gid pulper --shell /bin/bash --create-home pulper
-
-# Metadata
-LABEL org.opencontainers.image.title="Pulper" \
-      org.opencontainers.image.description="Containerized document-to-Markdown conversion via MarkItDown" \
-      org.opencontainers.image.source="https://github.com/AlexAsAService/Pulper"
-
 WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-
-# ---------------------------------------------------------------------------
-# deps — builder stage
-# ---------------------------------------------------------------------------
-FROM base AS deps
-
-COPY requirements.txt ./
-RUN pip install -r requirements.txt
+# Copy the classifier binary to a common location
+COPY --from=go-builder /build/classifier /usr/local/bin/classifier
+RUN chmod +x /usr/local/bin/classifier
 
 # ---------------------------------------------------------------------------
-# minimal — production-ready rootless stage
+# Stage 3: Minimal Foundation
 # ---------------------------------------------------------------------------
-FROM base AS minimal
-
-COPY --from=deps /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=deps /usr/local/bin /usr/local/bin
-
-# Input is always read-only source material; output is the artifact directory
-VOLUME ["/input", "/output"]
-
-COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# USER pulper
-
-# We should have a minimal entrypoint here cause we don't need to do transpilations
-ENTRYPOINT ["entrypoint.sh", "markitdown"]
-CMD ["--help"]
+FROM base AS minimal-foundation
+# (Already contains MarkItDown via pip and the Classifier binary)
 
 # ---------------------------------------------------------------------------
-# full — extended image with optional native dependencies (OCR, Office)
+# Stage 4: Full Foundation (with heavy dependencies)
 # ---------------------------------------------------------------------------
-FROM minimal AS full
-
-USER root
-
-# Install LibreOffice (Headless) and Tesseract OCR
+FROM minimal-foundation AS full-foundation
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice-writer \
     libreoffice-calc \
@@ -107,19 +69,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# We should have a full version of the entrypoint script here with the logic to transpile
+# =============================================================================
+# Final Production Targets
+# =============================================================================
+
+# --- TARGET: minimal-no-shim ---
+FROM minimal-foundation AS minimal-no-shim
+RUN groupadd -g 9999 pulper && \
+    useradd -u 9999 -g pulper -s /bin/bash -m pulper
+USER pulper
+ENTRYPOINT ["classifier"]
+CMD ["--help"]
+
+# --- TARGET: minimal-shim ---
+FROM minimal-foundation AS minimal-shim
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["--help"]
 
-# USER pulper
+# --- TARGET: full-no-shim ---
+FROM full-foundation AS full-no-shim
+RUN groupadd -g 9999 pulper && \
+    useradd -u 9999 -g pulper -s /bin/bash -m pulper
+USER pulper
+ENTRYPOINT ["classifier"]
+CMD ["--help"]
 
-# ---------------------------------------------------------------------------
-# shim — "It just works" stage with automatic UID/GID mapping
-# ---------------------------------------------------------------------------
-# We aren't offering non-shim version anymore so this is superfluous at this point
-# Maybe we should come back to this and rework to where we can build non-shim versions again
-FROM full AS shim
-
-USER root
-# (Inherits entrypoint and logic from base)
+# --- TARGET: full-shim ---
+FROM full-foundation AS full-shim
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["--help"]

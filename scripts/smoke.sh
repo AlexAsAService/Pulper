@@ -8,9 +8,10 @@
 
 set -euo pipefail
 
-STAGE="${STAGE:-full}"
+STAGE="${STAGE:-full-shim}"
 IMAGE="${1:-pulper:${STAGE}}"
-FIXTURES_DIR="$(cd "$(dirname "$0")/../tests/fixtures/${STAGE}" && pwd)"
+FIXTURES_STAGE="${STAGE%%-*}"
+FIXTURES_DIR="$(cd "$(dirname "$0")/../tests/fixtures/${FIXTURES_STAGE}" && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-}"
 if [[ -z "$OUTPUT_DIR" ]]; then
     OUTPUT_DIR="$(mktemp -d)"
@@ -23,7 +24,7 @@ mkdir -p "$OUTPUT_DIR"
 echo "==> Starting Smoke Tests"
 echo "    Image    : $IMAGE"
 echo "    Stage    : $STAGE"
-echo "    Fixtures : tests/fixtures/$STAGE"
+echo "    Fixtures : tests/fixtures/$FIXTURES_STAGE"
 echo "    Output   : $OUTPUT_DIR"
 echo "--------------------------------------------------"
 
