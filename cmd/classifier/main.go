@@ -41,72 +41,48 @@ func main() {
 		}
 	}
 
+	// 5. Handle Input
 	args := os.Args[1:]
 	if len(args) < 1 {
-		fmt.Println("Usage: classifier <input_dir_or_file> [markitdown_args...]")
+		fmt.Println("Usage: classifier <input_file> [markitdown_args...]")
 		os.Exit(1)
 	}
 
-	inputTarget := args[0]
-	fmt.Printf("Analyzing input target: %s\n", inputTarget)
-
-	info, err := os.Stat(inputTarget)
+	inputPath := args[0]
+	info, err := os.Stat(inputPath)
 	if err != nil {
-		fmt.Printf("Error accessing input target: %v\n", err)
+		fmt.Printf("Error: Cannot access input file '%s': %v\n", inputPath, err)
 		os.Exit(1)
 	}
 
-	// 5. Walk the directory (or process single file)
-	var filesToProcess []string
 	if info.IsDir() {
-		err = filepath.Walk(inputTarget, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !info.IsDir() {
-				filesToProcess = append(filesToProcess, path)
-			}
-			return nil
-		})
-		if err != nil {
-			fmt.Printf("Error walking directory: %v\n", err)
-			os.Exit(1)
-		}
-	} else {
-		filesToProcess = append(filesToProcess, inputTarget)
+		fmt.Printf("Error: '%s' is a directory. This tool only processes individual files.\n", inputPath)
+		os.Exit(1)
 	}
 
-	// 6. The "Chute" logic for batch processing
-	var markitdownInputs []string
-	for _, inputPath := range filesToProcess {
-		ext := strings.ToLower(filepath.Ext(inputPath))
-		
-		if t, ok := extMap[ext]; ok {
-			fmt.Printf("Routing %s to %s transpiler...\n", filepath.Base(inputPath), t.Name())
-			newPath, err := t.Transpile(inputPath)
-			if err != nil {
-				if errors.Is(err, ErrDepsMissing) {
-					fmt.Printf("  -> [SKIP] %s dependencies missing. Falling back to native MarkItDown.\n", t.Name())
-					markitdownInputs = append(markitdownInputs, inputPath)
-				} else {
-					fmt.Printf("  -> [ERROR] Transpilation failed: %v\n", err)
-					os.Exit(1)
-				}
+	// 6. Transpilation Logic
+	finalPath := inputPath
+	ext := strings.ToLower(filepath.Ext(inputPath))
+
+	if t, ok := extMap[ext]; ok {
+		fmt.Printf("Routing %s to %s transpiler...\n", filepath.Base(inputPath), t.Name())
+		newPath, err := t.Transpile(inputPath)
+		if err != nil {
+			if errors.Is(err, ErrDepsMissing) {
+				fmt.Printf("  -> [SKIP] %s dependencies missing. Falling back to native MarkItDown.\n", t.Name())
 			} else {
-				fmt.Printf("  -> [SUCCESS] Transpiled intermediate file: %s\n", filepath.Base(newPath))
-				markitdownInputs = append(markitdownInputs, newPath)
+				fmt.Printf("  -> [ERROR] Transpilation failed: %v\n", err)
+				os.Exit(1)
 			}
 		} else {
-			// No transpiler needed
-			markitdownInputs = append(markitdownInputs, inputPath)
+			fmt.Printf("  -> [SUCCESS] Transpiled intermediate file: %s\n", filepath.Base(newPath))
+			finalPath = newPath
 		}
 	}
 
 	// 7. Execute MarkItDown
 	fmt.Println("Handing off to MarkItDown...")
-	
-	markitdownArgs := []string{"markitdown"}
-	markitdownArgs = append(markitdownArgs, markitdownInputs...)
+	markitdownArgs := []string{"markitdown", finalPath}
 	if len(args) > 1 {
 		markitdownArgs = append(markitdownArgs, args[1:]...)
 	}
