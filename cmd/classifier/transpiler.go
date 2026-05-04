@@ -40,7 +40,7 @@ type Transpiler interface {
 	Extensions() []string
 	// Transpile performs the conversion. It checks dependencies lazily on first run.
 	// It returns the path to the newly transpiled file, which is then passed to MarkItDown.
-	Transpile(inputPath string, scratchDir string) (string, error)
+	Transpile(inputPath string) (string, error)
 	// Name returns the name of the transpiler (for logging).
 	Name() string
 }

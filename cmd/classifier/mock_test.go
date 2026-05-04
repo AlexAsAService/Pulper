@@ -2,13 +2,17 @@ package main
 
 import "strings"
 
-const testScratchDir = "/tmp"
-
 // MockExecutor implements Executor for testing
 type MockExecutor struct {
 	LookPathFunc func(file string) (string, error)
 	RunFunc      func(name string, arg ...string) ([]byte, error)
 	Commands     []string
+}
+
+func init() {
+	AppConfig = &Config{
+		ScratchDir: "/tmp",
+	}
 }
 
 func (m *MockExecutor) LookPath(file string) (string, error) {

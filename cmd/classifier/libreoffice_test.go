@@ -16,7 +16,7 @@ func TestLibreOfficeTranspiler_DepsMissing(t *testing.T) {
 	}
 	transpiler := NewLibreOfficeTranspiler(mockExec)
 
-	_, err := transpiler.Transpile("test.doc", testScratchDir)
+	_, err := transpiler.Transpile("test.doc")
 	
 	if !errors.Is(err, ErrDepsMissing) {
 		t.Errorf("Expected ErrDepsMissing, got: %v", err)
@@ -31,7 +31,7 @@ func TestLibreOfficeTranspiler_Success(t *testing.T) {
 	transpiler := NewLibreOfficeTranspiler(mockExec)
 
 	// Since we mock success, we don't care that the temp output file won't exist
-	_, err := transpiler.Transpile("test.doc", testScratchDir)
+	_, err := transpiler.Transpile("test.doc")
 	
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -56,7 +56,7 @@ func TestLibreOfficeTranspiler_RunError(t *testing.T) {
 	}
 	transpiler := NewLibreOfficeTranspiler(mockExec)
 
-	_, err := transpiler.Transpile("test.doc", testScratchDir)
+	_, err := transpiler.Transpile("test.doc")
 	
 	if err == nil {
 		t.Fatal("Expected an error from soffice crash, got nil")

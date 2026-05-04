@@ -33,7 +33,7 @@ func (t *FFmpegTranspiler) checkDeps() {
 	}
 }
 
-func (t *FFmpegTranspiler) Transpile(inputPath string, scratchDir string) (string, error) {
+func (t *FFmpegTranspiler) Transpile(inputPath string) (string, error) {
 	if t.state == StateUnknown {
 		t.checkDeps()
 	}
@@ -41,8 +41,8 @@ func (t *FFmpegTranspiler) Transpile(inputPath string, scratchDir string) (strin
 		return "", ErrDepsMissing
 	}
 
-	// We create a unique temporary file inside the centralized scratch directory.
-	tempFile, err := os.CreateTemp(scratchDir, "ffmpeg-*.wav")
+	// We create a unique temporary file inside the centralized ScratchDir.
+	tempFile, err := os.CreateTemp(AppConfig.ScratchDir, "ffmpeg-*.wav")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %w", err)
 	}

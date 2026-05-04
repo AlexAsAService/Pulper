@@ -14,7 +14,7 @@ func TestFFmpegTranspiler_DepsMissing(t *testing.T) {
 	}
 	transpiler := NewFFmpegTranspiler(mockExec)
 
-	_, err := transpiler.Transpile("test.wav", testScratchDir)
+	_, err := transpiler.Transpile("test.wav")
 	
 	if !errors.Is(err, ErrDepsMissing) {
 		t.Errorf("Expected ErrDepsMissing, got: %v", err)
@@ -25,7 +25,7 @@ func TestFFmpegTranspiler_Success(t *testing.T) {
 	mockExec := &MockExecutor{}
 	transpiler := NewFFmpegTranspiler(mockExec)
 
-	_, err := transpiler.Transpile("test.mp3", testScratchDir)
+	_, err := transpiler.Transpile("test.mp3")
 	
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -51,7 +51,7 @@ func TestFFmpegTranspiler_RunError(t *testing.T) {
 	}
 	transpiler := NewFFmpegTranspiler(mockExec)
 
-	_, err := transpiler.Transpile("test.mp3", testScratchDir)
+	_, err := transpiler.Transpile("test.mp3")
 	
 	if err == nil {
 		t.Fatal("Expected an error from ffmpeg crash, got nil")

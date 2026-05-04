@@ -25,17 +25,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 3. Create centralized scratch directory
-	scratchDir, err := os.MkdirTemp("", "pulper-scratch-*")
-	if err != nil {
-		fmt.Printf("Error creating scratch directory: %v\n", err)
-		os.Exit(1)
-	}
-	defer os.RemoveAll(scratchDir)
-
-	cfg := &Config{
-		ScratchDir: scratchDir,
-	}
+	// 3. Initialize Global Config
+	InitConfig()
+	defer AppConfig.Cleanup()
 
 	// 4. Build the centralized capabilities map
 	extMap := make(map[string]Transpiler)
@@ -91,7 +83,7 @@ func main() {
 		
 		if t, ok := extMap[ext]; ok {
 			fmt.Printf("Routing %s to %s transpiler...\n", filepath.Base(inputPath), t.Name())
-			newPath, err := t.Transpile(inputPath, cfg.ScratchDir)
+			newPath, err := t.Transpile(inputPath)
 			if err != nil {
 				if errors.Is(err, ErrDepsMissing) {
 					fmt.Printf("  -> [SKIP] %s dependencies missing. Falling back to native MarkItDown.\n", t.Name())

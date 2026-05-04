@@ -35,7 +35,7 @@ func (t *LibreOfficeTranspiler) checkDeps() {
 	}
 }
 
-func (t *LibreOfficeTranspiler) Transpile(inputPath string, scratchDir string) (string, error) {
+func (t *LibreOfficeTranspiler) Transpile(inputPath string) (string, error) {
 	if t.state == StateUnknown {
 		t.checkDeps()
 	}
@@ -47,7 +47,7 @@ func (t *LibreOfficeTranspiler) Transpile(inputPath string, scratchDir string) (
 
 	// We create a unique temporary directory inside the centralized ScratchDir for this specific file.
 	// LibreOffice requires an `--outdir`, so this prevents collisions if files have the same name.
-	fileOutDir, err := os.MkdirTemp(scratchDir, "soffice-out-*")
+	fileOutDir, err := os.MkdirTemp(AppConfig.ScratchDir, "soffice-out-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create specific outdir: %w", err)
 	}
