@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"path/filepath"
+	"strings"
 )
 
 type FFmpegTranspiler struct {
@@ -41,14 +42,10 @@ func (t *FFmpegTranspiler) Transpile(inputPath string) (string, error) {
 		return "", ErrDepsMissing
 	}
 
-	// We create a unique temporary file inside the centralized ScratchDir.
-	tempFile, err := os.CreateTemp(AppConfig.ScratchDir, "ffmpeg-*.wav")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temp file: %w", err)
-	}
-	convertedFile := tempFile.Name()
-	tempFile.Close() // FFmpeg will overwrite/write to this path
-
+	baseName := filepath.Base(inputPath)
+	ext := filepath.Ext(baseName)
+	nameWithoutExt := strings.TrimSuffix(baseName, ext)
+	convertedFile := filepath.Join(AppConfig.ScratchDir, nameWithoutExt+".wav")
 	// CLI Arguments:
 	// -y: Overwrite output files without asking for confirmation.
 	// -i [input]: Specifies the input file.
