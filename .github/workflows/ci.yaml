@@ -8,30 +8,91 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
-  build-and-test:
-    name: Build & Smoke Test
+  build:
+    name: Build Images
     runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        target: [minimal-shim, minimal-no-shim, full-shim, full-no-shim]
-      max-parallel: 1
-    
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@v4
 
-      - name: Build Local Image
-        id: build
-        uses: ./.github/actions/docker-build
+      - name: Log in to registry
+        uses: docker/login-action@v3
         with:
-          load: true
-          push: false
-          tags: pulper:${{ matrix.target }}
-          target: ${{ matrix.target }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push all targets
+        uses: docker/bake-action@v4
+        with:
+          push: true
+          set: |
+            *.args.TAG=sha-${{ github.sha }}
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+
+  test:
+    name: Smoke Test
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [minimal, full]
+        variant: [shim, no-shim]
+        include:
+          - variant: no-shim
+            gymnastics: true
+          - variant: shim
+            gymnastics: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Smoke Test
-        uses: ./.github/actions/smoke-test
-        with:
-          image: ${{ steps.build.outputs.image-ref }}
-          target: ${{ matrix.target }}
+        run: |
+          # Determine the image name and tag
+          TARGET_NAME="${{ matrix.flavor }}-${{ matrix.variant }}"
+          
+          # Map flavor to image repo name
+          REPO="pulper"
+          if [[ "${{ matrix.flavor }}" == "minimal" ]]; then
+            REPO="pulper-lite"
+          fi
+          
+          # Map variant to tag suffix
+          TAG="sha-${{ github.sha }}"
+          if [[ "${{ matrix.variant }}" == "no-shim" ]]; then
+            TAG="${TAG}-no-shim"
+          fi
+          
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/${REPO}:${TAG}"
+          
+          # Only add the "gymnastics" for no-shim
+          EXTRA_ARGS=""
+          if [[ "${{ matrix.gymnastics }}" == "true" ]]; then
+            EXTRA_ARGS="--user $(id -u):$(id -g) -e HOME=/tmp"
+          fi
+          
+          # Execute the smoke test
+          STAGE="${{ matrix.flavor }}" IMAGE="$IMAGE" DOCKER_OPTS="$EXTRA_ARGS" ./scripts/smoke.sh
