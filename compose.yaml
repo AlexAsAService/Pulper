@@ -8,8 +8,8 @@ services:
   pulper:
     build:
       context: .
-      target: ${STAGE:-full}
-    image: pulper:${STAGE:-full}
+      target: ${STAGE:-full-shim}
+    image: pulper:${STAGE:-full-shim}
     volumes:
       - ./input:/input:ro             # read-only source material
       - ./tests/fixtures:/fixtures:ro # test fixtures
