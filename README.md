@@ -1,76 +1,111 @@
-# Product Overview — Containerized Document-to-Markdown Conversion Tool
+# 🧺 Pulper
 
-## Summary
-A clean, production-minded containerization of Microsoft MarkItDown for converting common document formats into Markdown through a predictable, portable runtime. Designed for developers, AI workflows, and document-processing pipelines that need reliable Markdown extraction without installing Python packages, native dependencies, OCR tooling, office converters, or media-processing utilities directly on the host.
+**Professional, containerized document-to-Markdown conversion.**
 
-## Purpose
-Modern AI and automation workflows often need to turn messy source documents into plain text or Markdown before indexing, summarizing, embedding, or handing content to agents. Installing document conversion tooling directly on a workstation or server can be inconsistent and fragile. This project packages the conversion workflow into a repeatable container interface with sane defaults, clean volume boundaries, and documented usage patterns.
+Pulper is a containerization of Microsoft [MarkItDown](https://github.com/microsoft/markitdown), designed to turn complex source documents into clean, AI-ready Markdown. It abstracts away the dependency requirements for OCR, media processing, and document transpilation into a portable CLI interface.
 
-## Core Capabilities
-- **Universal Markdown Conversion**: Converts modern formats (`.docx`, `.xlsx`, `.pptx`) and legacy formats (`.doc`, `.xls`, `.ppt`, `.rtf`, `.odt`, `.ods`, `.odp`) into clean Markdown.
-- **Auto-Transpilation**: Transparently uses LibreOffice to modernize legacy documents before conversion.
-- **Audio Normalization**: Automatically normalizes audio files (PCM, Bitrate) via FFmpeg to ensure compatibility with transcription engines.
-- **Portable & Secure**: Automatic UID/GID mapping ensures "It Just Works" on any host without permission headaches, while strictly running as a non-root user.
-- **Predictable Interface**: Simple `/input` and `/output` volume mapping.
+---
 
-## Primary Interface
-- CLI-first container execution
-- Inputs mounted read-only into /input
-- Outputs written to /output
-- Optional flags passed through to the conversion command
+## 🚀 Capabilities
 
-## Example Usage
-    docker run --rm \
-      -v "$PWD/input:/input:ro" \
-      -v "$PWD/output:/output" \
-      document-markdown-container \
-      /input/report.pdf -o /output/report.md
+Pulper provides a unified interface for converting a wide range of document types. To ensure reliable conversion, it uses a classifier written in Go to preprocess inputs before handing them to the MarkItDown engine.
 
-## Design Principles
-- Host Cleanliness — No Python, OCR, office, or media dependencies installed on the host
-- Reproducibility — Same container image produces consistent behavior across machines
-- Pipeline Friendly — Designed for scripting, CI jobs, local automation, and agent ingestion flows
-- Safe File Boundaries — Explicit input/output mounts instead of uncontrolled filesystem access
-- Minimal Surprise — Clear defaults, clear errors, and documented examples
-- Extensible Core — Starts as a CLI image, with room to grow into API, queue, or batch modes later
+### Supported Formats
+- **Modern Formats**: Native support for `.docx`, `.pptx`, `.xlsx`, `.pdf`, `.html`, `.csv`, `.json`, `.txt`, and `.zip` archives.
+- **Legacy Documents**: Automatic conversion of `.doc`, `.odt`, `.rtf`, `.ods`, `.ppt`, and `.odp` via an internal LibreOffice runtime.
+- **Audio Normalization**: Automatic processing of `.wav`, `.mp3`, `.m4a`, `.flac`, and `.ogg` via FFmpeg (standardized to 16kHz mono for optimal ingestion).
 
-## System Architecture
-- Container image provides the runtime environment
-- MarkItDown performs the document-to-Markdown conversion
-- Optional native dependencies support richer file handling
-- /input is treated as read-only source material
-- /output is treated as the generated artifact directory
-- Scripts and examples demonstrate repeatable conversion workflows
+### How it works
+When you pass a file to Pulper, the internal classifier identifies the file type. If it's a legacy or media format that MarkItDown doesn't natively support, Pulper automatically transpiles it into a modern equivalent (like `.docx` or normalized `.wav`) in a temporary scratch space before final conversion.
 
-## Operational Features
-- Non-root container user
-- Read-only input mounts
-- Explicit output directory
-- Version-pinned dependencies
-- Smoke tests using representative sample files
-- Clear image tags for minimal and full builds
-- Optional local Compose setup for repeatable testing
+---
 
-## Target Use Cases
-- Preparing documents for LLM prompts
-- Building ingestion pipelines for RAG systems
-- Converting business documents into Markdown for review or indexing
-- Extracting text from mixed-format project folders
-- Running document conversion in CI without polluting the runner
-- Giving AI agents a clean, repeatable document normalization tool
+## 📥 Where to Download
 
-## Deployment Model
-- Local CLI container for one-off conversions
-- Scriptable container command for batch jobs
-- CI/CD-friendly image for automated document processing
-- Future optional service mode for HTTP-based conversion
+Images are hosted on the GitHub Container Registry (GHCR).
 
-## Non-Goals
-- Not a full document editor
-- Not a perfect layout-preserving converter
-- Not a visual reasoning system
-- Not a replacement for human review of OCR-heavy documents
-- Not initially a hosted SaaS or distributed queue system
+| Variant | Repository | Tag |
+| :--- | :--- | :--- |
+| **Pulper (Full)** | [ghcr.io/alexasaservice/pulper](https://ghcr.io/alexasaservice/pulper) | `latest` |
+| **Pulper (Full, No-Shim)** | [ghcr.io/alexasaservice/pulper](https://ghcr.io/alexasaservice/pulper) | `latest-no-shim` |
+| **Pulper-Lite** | [ghcr.io/alexasaservice/pulper-lite](https://ghcr.io/alexasaservice/pulper-lite) | `latest` |
+| **Pulper-Lite (No-Shim)** | [ghcr.io/alexasaservice/pulper-lite](https://ghcr.io/alexasaservice/pulper-lite) | `latest-no-shim` |
 
-## Value Proposition
-This project turns document-to-Markdown conversion into a clean, portable, container-native utility. It removes dependency chaos from the host machine, creates a repeatable workflow for AI and automation pipelines, and provides a professional foundation that can later expand into richer OCR, API, batch, or agent-oriented document ingestion features.
+---
+
+## 🎭 Image Flavors
+
+Pulper is offered in two main flavors: **Pulper** (Full) and **Pulper-Lite**.
+
+- **Pulper**: Includes the full suite of conversion tools (LibreOffice, FFmpeg).
+- **Pulper-Lite**: A lightweight image focused on modern document formats. It lacks legacy transpilers; if a legacy file is detected, the classifier will log a warning and pass the original file to MarkItDown, which will likely result in a conversion error.
+
+---
+
+## 🔐 Rootless & Permissions
+
+Pulper is designed for rootless execution, but the configuration depends on your orchestration environment.
+
+### The Shim (Recommended for Local Dev)
+Images tagged `latest` include a lightweight Bash shim.
+- **Mechanism**: The container starts as `root` to map the internal `pulper` user to the UID/GID that owns your mounted volumes, then drops privileges.
+- **Benefit**: This ensures that files written to your host `/output` folder are owned by the same user who owns the host directory, avoiding permission conflicts without manual configuration.
+
+### No-Shim (`latest-no-shim`)
+Images tagged `latest-no-shim` lack the entrypoint wrapper and run as a non-privileged user named `pulper` by default.
+- **Mechanism**: Defaults to UID/GID `9999`. 
+- **Usage**: In Docker, you should use the `--user` flag to map the execution to the UID/GID that owns your input/output directories. (Other orchestrators like Kubernetes handle this via security contexts).
+- **Complexity with Full Version**: While **Pulper-Lite** is easy to run in `no-shim` mode, the **Full** version requires significant effort. LibreOffice requires a writable `$HOME` directory to initialize its user profile. Since the default home directory in the image is owned by UID `9999`, overriding the user via `--user` will break LibreOffice's ability to write there. You must manually provide a writable path (e.g., `-e HOME=/tmp`) for the conversion tools to function. 
+
+*Note: We offer the no-shim variant for the Full image, but we make no guarantees regarding the compatibility of legacy conversion tools in highly restrictive environments.*
+
+---
+
+## 🛠️ Usage Examples
+
+### Pulper (Full) with Shim
+```bash
+docker run --rm \
+  -v "$PWD/input:/input:ro" \
+  -v "$PWD/output:/output" \
+  ghcr.io/alexasaservice/pulper:latest \
+  /input/report.doc -o /output/report.md
+```
+
+### Pulper-Lite with No-Shim
+```bash
+docker run --rm \
+  -v "$PWD/input:/input:ro" \
+  -v "$PWD/output:/output" \
+  --user $(id -u):$(id -g) \
+  ghcr.io/alexasaservice/pulper-lite:latest-no-shim \
+  /input/data.docx -o /output/data.md
+```
+
+---
+
+## 🏗️ Building From Source
+
+### Using Docker Compose
+```bash
+# Build the full version
+STAGE=full-shim docker compose build
+
+# Build the lite version
+STAGE=minimal-shim docker compose build
+```
+
+### Testing
+- **Unit Tests**: `go test ./cmd/classifier/...` (requires Go on host).
+- **Smoke Tests**: `./scripts/smoke.sh [target]` (verifies the container pipeline).
+
+---
+
+## ⚖️ License
+MIT. See `LICENSE` for details.
+
+Permission is granted to fork, modify, and redistribute this code. We request that you provide credit and link back to this project in your redistribution.
+
+---
+**Pulper** is a project by [Alex As A Service](https://alexasaservice.com). 
+*Bridging the gap between messy data and clean AI ingestion.*
