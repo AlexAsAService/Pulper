@@ -32,7 +32,8 @@ jobs:
 
     strategy:
       matrix:
-        target: [minimal, full]
+        target: [minimal-shim, minimal-no-shim, full-shim, full-no-shim]
+      max-parallel: 1
 
     steps:
       - name: Checkout
