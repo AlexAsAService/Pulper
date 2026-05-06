@@ -12,6 +12,10 @@ variable "REGISTRY" {
   default = "ghcr.io/alexasaservice"
 }
 
+variable "REPO_OWNER" {
+  default = "alexasaservice"
+}
+
 # Common configuration shared by all targets
 target "_common" {
   context = "."
@@ -23,13 +27,13 @@ target "_common" {
 target "pulper" {
   inherits = ["_common"]
   target   = "full-shim"
-  tags     = ["${REGISTRY}/pulper:${TAG}"]
+  tags     = ["${REGISTRY}/${REPO_OWNER}/pulper:${TAG}"]
 }
 
 target "pulper-no-shim" {
   inherits = ["_common"]
   target   = "full-no-shim"
-  tags     = ["${REGISTRY}/pulper:${TAG}-no-shim"]
+  tags     = ["${REGISTRY}/${REPO_OWNER}/pulper:${TAG}-no-shim"]
 }
 
 # --- LITE VARIANTS (Pulper-Lite) ---
@@ -37,13 +41,13 @@ target "pulper-no-shim" {
 target "pulper-lite" {
   inherits = ["_common"]
   target   = "minimal-shim"
-  tags     = ["${REGISTRY}/pulper-lite:${TAG}"]
+  tags     = ["${REGISTRY}/${REPO_OWNER}/pulper-lite:${TAG}"]
 }
 
 target "pulper-lite-no-shim" {
   inherits = ["_common"]
   target   = "minimal-no-shim"
-  tags     = ["${REGISTRY}/pulper-lite:${TAG}-no-shim"]
+  tags     = ["${REGISTRY}/${REPO_OWNER}/pulper-lite:${TAG}-no-shim"]
 }
 
 # Default group to build all targets

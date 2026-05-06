@@ -38,11 +38,13 @@ jobs:
 
       - name: Build and Push all targets
         uses: docker/bake-action@v7
+        env:
+          REPO_OWNER: ${{ github.repository_owner }}
+          REGISTRY: ${{ env.REGISTRY }}
+          TAG: sha-${{ github.sha }}
         with:
           push: true
           set: |
-            variable.TAG.value=sha-${{ github.sha }}
-            variable.REGISTRY.value=${{ env.REGISTRY }}/${{ github.repository_owner }}
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
 
