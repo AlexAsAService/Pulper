@@ -1,0 +1,24 @@
+name: To Lower Case
+description: Converts an arbitrary string to lowercase using bash parameter expansion.
+
+inputs:
+  string:
+    description: The string to convert to lowercase.
+    required: true
+
+outputs:
+  lower-case:
+    description: The input string converted to lowercase.
+    value: ${{ steps.convert.outputs.lower-case }}
+
+runs:
+  using: composite
+  steps:
+    - name: Convert to lowercase
+      id: convert
+      env:
+        INPUT: ${{ inputs.string }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "lower-case=${INPUT,,}" >> "$GITHUB_OUTPUT"

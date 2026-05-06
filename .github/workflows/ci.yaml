@@ -36,10 +36,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      - name: Normalize repo owner
+        id: repo_owner
+        uses: ./.github/actions/to-lower
+        with:
+          string: ${{ github.repository_owner }}
+
       - name: Build and Push all targets
         uses: docker/bake-action@v7
         env:
-          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_OWNER: ${{ steps.repo_owner.outputs.lower-case }}
           REGISTRY: ${{ env.REGISTRY }}
           TAG: sha-${{ github.sha }}
         with:
