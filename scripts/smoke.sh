@@ -10,6 +10,14 @@ set -euo pipefail
 
 STAGE="${STAGE:-full-shim}"
 IMAGE="${1:-pulper:${STAGE}}"
+DOCKER_OPTS="${DOCKER_OPTS:-}"
+
+# Convert DOCKER_OPTS string to an array for safe unrolling
+DOCKER_OPTS_ARRAY=()
+if [[ -n "$DOCKER_OPTS" ]]; then
+    read -r -a DOCKER_OPTS_ARRAY <<< "$DOCKER_OPTS"
+fi
+
 FIXTURES_STAGE="${STAGE%%-*}"
 FIXTURES_DIR="$(cd "$(dirname "$0")/../tests/fixtures/${FIXTURES_STAGE}" && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-}"
@@ -41,6 +49,7 @@ test_file() {
     docker run --rm \
       -v "$FIXTURES_DIR:/input:ro" \
       -v "$OUTPUT_DIR:/output" \
+      "${DOCKER_OPTS_ARRAY[@]}" \
       "$IMAGE" \
       "/input/$filename" -o "/output/$result_name"
 
