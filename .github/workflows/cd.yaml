@@ -48,7 +48,7 @@ jobs:
         with:
           push: true
           set: |
-            *.args.TAG=${{ steps.version.outputs.val }}
-            *.args.REGISTRY=${{ env.REGISTRY }}/${{ github.repository_owner }}
+            variable.TAG.value=${{ steps.version.outputs.val }}
+            variable.REGISTRY.value=${{ env.REGISTRY }}/${{ github.repository_owner }}
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
