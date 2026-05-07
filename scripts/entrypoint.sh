@@ -5,8 +5,8 @@ set -euo pipefail
 # 1. Handle UID/GID mapping for bind-mounted volumes
 # If running as root, we set up the 'pulper' user and drop privileges via gosu.
 if [[ "$(id -u)" == "0" ]]; then
-    USER_ID=${USER_ID:-1000}
-    GROUP_ID=${GROUP_ID:-1000}
+    USER_ID=${USER_ID:-$(stat -c '%u' /output)}
+    GROUP_ID=${GROUP_ID:-$(stat -c '%g' /output)}
 
     if ! getent group pulper >/dev/null; then
         groupadd -g "$GROUP_ID" pulper
