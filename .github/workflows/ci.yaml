@@ -109,7 +109,8 @@ jobs:
             TAG="${TAG}-no-shim"
           fi
           
-          IMAGE="${REGISTRY}/$OWNER/${REPO}:${TAG}"
+          IMAGE="${REGISTRY}/${OWNER}/${REPO}:${TAG}"
+          echo " IMAGE: $IMAGE"
           
           # Only add the "gymnastics" for no-shim
           DOCKER_OPTS=""
