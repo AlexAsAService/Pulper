@@ -95,9 +95,6 @@ jobs:
           VARIANT: ${{ matrix.variant }}
           GYMNASTICS: ${{ matrix.gymnastics }}
         run: |
-          # Determine the image name and tag
-          TARGET_NAME="$FLAVOR-$VARIANT"
-          
           # Map flavor to image repo name
           REPO="pulper"
           if [[ "$FLAVOR" == "pulper-lite" ]]; then
@@ -109,8 +106,7 @@ jobs:
             TAG="${TAG}-no-shim"
           fi
           
-          IMAGE="${REGISTRY}/${OWNER}/${REPO}:${TAG}"
-          echo " IMAGE: $IMAGE"
+          export IMAGE="${REGISTRY}/${OWNER}/${REPO}:${TAG}"
           
           # Only add the "gymnastics" for no-shim
           DOCKER_OPTS=""
