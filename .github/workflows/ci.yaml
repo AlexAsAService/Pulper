@@ -61,7 +61,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        flavor: [minimal, full]
+        flavor: [pulper, pulper-lite]
         variant: [shim, no-shim]
         include:
           - variant: no-shim
@@ -80,30 +80,49 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Normalize repo owner
+        id: repo_owner
+        uses: ./.github/actions/to-lower
+        with:
+          string: ${{ github.repository_owner }}
+
       - name: Run Smoke Test
+        env:
+          OWNER: ${{ steps.repo_owner.outputs.lower-case }}
+          REGISTRY: ${{ env.REGISTRY }}
+          TAG: sha-${{ github.sha }}
+          FLAVOR: ${{ matrix.flavor }}
+          VARIANT: ${{ matrix.variant }}
+          GYMNASTICS: ${{ matrix.gymnastics }}
         run: |
           # Determine the image name and tag
-          TARGET_NAME="${{ matrix.flavor }}-${{ matrix.variant }}"
+          TARGET_NAME="$FLAVOR-$VARIANT"
           
           # Map flavor to image repo name
           REPO="pulper"
-          if [[ "${{ matrix.flavor }}" == "minimal" ]]; then
+          if [[ "$FLAVOR" == "pulper-lite" ]]; then
             REPO="pulper-lite"
           fi
           
           # Map variant to tag suffix
-          TAG="sha-${{ github.sha }}"
-          if [[ "${{ matrix.variant }}" == "no-shim" ]]; then
+          if [[ "$VARIANT" == "no-shim" ]]; then
             TAG="${TAG}-no-shim"
           fi
           
-          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/${REPO}:${TAG}"
+          IMAGE="${REGISTRY}/$OWNER/${REPO}:${TAG}"
           
           # Only add the "gymnastics" for no-shim
-          EXTRA_ARGS=""
-          if [[ "${{ matrix.gymnastics }}" == "true" ]]; then
-            EXTRA_ARGS="--user $(id -u):$(id -g) -e HOME=/tmp"
+          DOCKER_OPTS=""
+          if [[ "$GYMNASTICS" == "true" ]]; then
+            DOCKER_OPTS="--user $(id -u):$(id -g) -e HOME=/tmp"
+          fi
+
+          # Set the fixtures stage based on the flavor
+          if [[ "$FLAVOR" == "pulper-lite" ]]; then
+            export FIXTURES_STAGE="minimal"
+          else
+            export FIXTURES_STAGE="full"
           fi
           
           # Execute the smoke test
-          STAGE="${{ matrix.flavor }}" IMAGE="$IMAGE" DOCKER_OPTS="$EXTRA_ARGS" ./scripts/smoke.sh
+          ./scripts/smoke.sh

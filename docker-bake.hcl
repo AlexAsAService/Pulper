@@ -9,11 +9,11 @@ variable "TAG" {
 }
 
 variable "REGISTRY" {
-  default = "ghcr.io/alexasaservice"
+  default = "docker.io"
 }
 
 variable "REPO_OWNER" {
-  default = "alexasaservice"
+  default = "local"
 }
 
 # Common configuration shared by all targets
