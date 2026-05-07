@@ -109,7 +109,7 @@ jobs:
           export IMAGE="${REGISTRY}/${OWNER}/${REPO}:${TAG}"
           
           # Only add the "gymnastics" for no-shim
-          DOCKER_OPTS=""
+          export DOCKER_OPTS=""
           if [[ "$GYMNASTICS" == "true" ]]; then
             DOCKER_OPTS="--user $(id -u):$(id -g) -e HOME=/tmp"
           fi
