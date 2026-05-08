@@ -42,15 +42,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the classifier binary to a common location
-COPY --from=go-builder /build/classifier /usr/local/bin/classifier
-RUN chmod +x /usr/local/bin/classifier
-
 # ---------------------------------------------------------------------------
 # Stage 3: Minimal Foundation
 # ---------------------------------------------------------------------------
 FROM base AS minimal-foundation
-# (Already contains MarkItDown via pip and the Classifier binary)
+# (Contains MarkItDown + ffmpeg. The Go classifier binary is injected at the final target stage.)
 
 # ---------------------------------------------------------------------------
 # Stage 4: Full Foundation (with heavy dependencies)
@@ -73,7 +69,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # --- TARGET: minimal-no-shim ---
 FROM minimal-foundation AS minimal-no-shim
-RUN groupadd -g 9999 pulper && \
+COPY --from=go-builder /build/classifier /usr/local/bin/classifier
+RUN chmod +x /usr/local/bin/classifier && \
+    groupadd -g 9999 pulper && \
     useradd -u 9999 -g pulper -s /bin/bash -m pulper
 USER pulper
 ENTRYPOINT ["classifier"]
@@ -83,19 +81,22 @@ CMD ["--help"]
 FROM minimal-foundation AS minimal-shim
 RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY --from=go-builder /build/classifier /usr/local/bin/classifier
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/classifier
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["--help"]
 
 # --- TARGET: full-no-shim ---
 FROM full-foundation AS full-no-shim
+COPY --from=go-builder /build/classifier /usr/local/bin/classifier
 
+# Make classifier executable
 # Pre-configure LibreOffice user profile path so it works without a real HOME.
 # This avoids needing -env:UserInstallation at runtime in rootless (no-shim) containers.
-RUN sed -i 's|UserInstallation=.*|UserInstallation=file:///tmp/libreoffice-profile|' \
-    /usr/lib/libreoffice/program/bootstraprc
-
-RUN groupadd -g 9999 pulper && \
+RUN chmod +x /usr/local/bin/classifier && \
+    sed -i 's|UserInstallation=.*|UserInstallation=file:///tmp/libreoffice-profile|' \
+        /usr/lib/libreoffice/program/bootstraprc && \
+    groupadd -g 9999 pulper && \
     useradd -u 9999 -g pulper -s /bin/bash -m pulper
 USER pulper
 ENTRYPOINT ["classifier"]
@@ -105,6 +106,7 @@ CMD ["--help"]
 FROM full-foundation AS full-shim
 RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY --from=go-builder /build/classifier /usr/local/bin/classifier
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/classifier
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["--help"]
