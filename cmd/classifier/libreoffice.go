@@ -48,7 +48,7 @@ func (t *LibreOfficeTranspiler) Transpile(inputPath string) (string, error) {
 	// --headless: Runs LibreOffice without a graphical user interface (required for background/container processing).
 	// --convert-to [ext]: Tells LibreOffice to convert the input document to the specified output format.
 	// --outdir [dir]: LibreOffice requires an output directory rather than a specific output filename. It places the converted file here.
-	if out, err := t.executor.Run("soffice", "--headless", "--convert-to", targetExt, "--outdir", AppConfig.ScratchDir, inputPath); err != nil {
+	if out, err := t.executor.Run("soffice", "--headless", "-env:UserInstallation=file://"+AppConfig.ScratchDir+"/lo-profile", "--convert-to", targetExt, "--outdir", AppConfig.ScratchDir, inputPath); err != nil {
 		return "", fmt.Errorf("soffice failed: %w\nOutput: %s", err, string(out))
 	}
 
