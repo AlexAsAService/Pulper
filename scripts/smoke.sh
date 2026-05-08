@@ -8,9 +8,21 @@
 
 set -euo pipefail
 
-STAGE="${STAGE:-full-shim}"
-IMAGE="${1:-pulper:${STAGE}}"
-FIXTURES_STAGE="${STAGE%%-*}"
+REGISTRY="${REGISTRY:-docker.io}"
+OWNER="${OWNER:-local}"
+PRODUCT="${PRODUCT:-pulper}"
+VARIANT="${VARIANT:-}"
+TAG="${TAG:-latest}"
+IMAGE="${IMAGE:-${REGISTRY}/${OWNER}/${PRODUCT}:${TAG}${VARIANT}}"
+DOCKER_OPTS="${DOCKER_OPTS:-}"
+
+# Convert DOCKER_OPTS string to an array for safe unrolling
+DOCKER_OPTS_ARRAY=()
+if [[ -n "$DOCKER_OPTS" ]]; then
+    read -r -a DOCKER_OPTS_ARRAY <<< "$DOCKER_OPTS"
+fi
+
+FIXTURES_STAGE="${FIXTURES_STAGE:-full}"
 FIXTURES_DIR="$(cd "$(dirname "$0")/../tests/fixtures/${FIXTURES_STAGE}" && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-}"
 if [[ -z "$OUTPUT_DIR" ]]; then
@@ -22,10 +34,13 @@ fi
 mkdir -p "$OUTPUT_DIR"
 
 echo "==> Starting Smoke Tests"
+echo "    Product  : $PRODUCT"
+echo "    Variant  : $VARIANT"
+echo "    Tag      : $TAG"
 echo "    Image    : $IMAGE"
-echo "    Stage    : $STAGE"
-echo "    Fixtures : tests/fixtures/$FIXTURES_STAGE"
-echo "    Output   : $OUTPUT_DIR"
+echo "    Fixtures Stage : $FIXTURES_STAGE"
+echo "    Fixtures Dir : $FIXTURES_DIR"
+echo "    Output Dir   : $OUTPUT_DIR"
 echo "--------------------------------------------------"
 
 # Function to test a single file
@@ -41,6 +56,7 @@ test_file() {
     docker run --rm \
       -v "$FIXTURES_DIR:/input:ro" \
       -v "$OUTPUT_DIR:/output" \
+      "${DOCKER_OPTS_ARRAY[@]}" \
       "$IMAGE" \
       "/input/$filename" -o "/output/$result_name"
 

@@ -27,12 +27,10 @@ FROM python:3.12-slim AS base
 # - PYTHONUNBUFFERED: Real-time logging (no stdout/stderr buffering)
 # - PIP_NO_CACHE_DIR: Reduce image size by skipping pip cache
 # - PIP_DISABLE_PIP_VERSION_CHECK: Silence noisy update warnings
-# - ORT_LOGGING_LEVEL: Silence ONNX hardware discovery warnings (Level 3 = ERROR)
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    ORT_LOGGING_LEVEL=3 \
     PATH="/usr/local/bin:$PATH"
 
 # Install shared runtime dependencies (ffmpeg is needed by markitdown)
@@ -44,15 +42,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the classifier binary to a common location
-COPY --from=go-builder /build/classifier /usr/local/bin/classifier
-RUN chmod +x /usr/local/bin/classifier
-
 # ---------------------------------------------------------------------------
 # Stage 3: Minimal Foundation
 # ---------------------------------------------------------------------------
 FROM base AS minimal-foundation
-# (Already contains MarkItDown via pip and the Classifier binary)
+# (Contains MarkItDown + ffmpeg. The Go classifier binary is injected at the final target stage.)
 
 # ---------------------------------------------------------------------------
 # Stage 4: Full Foundation (with heavy dependencies)
@@ -75,7 +69,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # --- TARGET: minimal-no-shim ---
 FROM minimal-foundation AS minimal-no-shim
-RUN groupadd -g 9999 pulper && \
+COPY --from=go-builder /build/classifier /usr/local/bin/classifier
+RUN chmod +x /usr/local/bin/classifier && \
+    groupadd -g 9999 pulper && \
     useradd -u 9999 -g pulper -s /bin/bash -m pulper
 USER pulper
 ENTRYPOINT ["classifier"]
@@ -85,13 +81,22 @@ CMD ["--help"]
 FROM minimal-foundation AS minimal-shim
 RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY --from=go-builder /build/classifier /usr/local/bin/classifier
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/classifier
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["--help"]
 
 # --- TARGET: full-no-shim ---
 FROM full-foundation AS full-no-shim
-RUN groupadd -g 9999 pulper && \
+COPY --from=go-builder /build/classifier /usr/local/bin/classifier
+
+# Make classifier executable
+# Pre-configure LibreOffice user profile path so it works without a real HOME.
+# This avoids needing -env:UserInstallation at runtime in rootless (no-shim) containers.
+RUN chmod +x /usr/local/bin/classifier && \
+    sed -i 's|UserInstallation=.*|UserInstallation=file:///tmp/libreoffice-profile|' \
+        /usr/lib/libreoffice/program/bootstraprc && \
+    groupadd -g 9999 pulper && \
     useradd -u 9999 -g pulper -s /bin/bash -m pulper
 USER pulper
 ENTRYPOINT ["classifier"]
@@ -101,6 +106,7 @@ CMD ["--help"]
 FROM full-foundation AS full-shim
 RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY --from=go-builder /build/classifier /usr/local/bin/classifier
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/classifier
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["--help"]
