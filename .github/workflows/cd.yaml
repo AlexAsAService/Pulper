@@ -72,10 +72,11 @@ jobs:
       - name: Build and Push (Bake)
         if: steps.version.outputs.mode == 'build'
         uses: docker/bake-action@a66e1c87e2eca0503c343edf1d208c716d54b8a8 # v7
+        env:
+          TAG: ${{ steps.version.outputs.val }}
+          REGISTRY: ${{ env.REGISTRY }}/${{ steps.owner.outputs.lower }}
         with:
           push: true
           set: |
-            variable.TAG.value=${{ steps.version.outputs.val }}
-            variable.REGISTRY.value=${{ env.REGISTRY }}/${{ steps.owner.outputs.lower }}
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
