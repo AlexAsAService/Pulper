@@ -108,10 +108,10 @@ jobs:
           
           export IMAGE="${REGISTRY}/${OWNER}/${REPO}:${TAG}"
           
-          # Only add the "gymnastics" for no-shim
-          export DOCKER_OPTS=""
+          # Suppress ONNX runtime hardware discovery warnings in CI output
+          export DOCKER_OPTS="-e ORT_LOGGING_LEVEL=3 -e ONNXRUNTIME_LOG_SEVERITY_LEVEL=3"
           if [[ "$GYMNASTICS" == "true" ]]; then
-            DOCKER_OPTS="--user $(id -u):$(id -g) -e HOME=/tmp"
+            DOCKER_OPTS="$DOCKER_OPTS --user $(id -u):$(id -g) -e HOME=/tmp"
           fi
 
           # Set the fixtures stage based on the flavor

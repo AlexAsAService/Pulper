@@ -27,12 +27,10 @@ FROM python:3.12-slim AS base
 # - PYTHONUNBUFFERED: Real-time logging (no stdout/stderr buffering)
 # - PIP_NO_CACHE_DIR: Reduce image size by skipping pip cache
 # - PIP_DISABLE_PIP_VERSION_CHECK: Silence noisy update warnings
-# - ORT_LOGGING_LEVEL: Silence ONNX hardware discovery warnings (Level 3 = ERROR)
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    ORT_LOGGING_LEVEL=3 \
     PATH="/usr/local/bin:$PATH"
 
 # Install shared runtime dependencies (ffmpeg is needed by markitdown)
