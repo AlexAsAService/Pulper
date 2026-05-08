@@ -91,6 +91,12 @@ CMD ["--help"]
 
 # --- TARGET: full-no-shim ---
 FROM full-foundation AS full-no-shim
+
+# Pre-configure LibreOffice user profile path so it works without a real HOME.
+# This avoids needing -env:UserInstallation at runtime in rootless (no-shim) containers.
+RUN sed -i 's|UserInstallation=.*|UserInstallation=file:///tmp/libreoffice-profile|' \
+    /usr/lib/libreoffice/program/bootstraprc
+
 RUN groupadd -g 9999 pulper && \
     useradd -u 9999 -g pulper -s /bin/bash -m pulper
 USER pulper
