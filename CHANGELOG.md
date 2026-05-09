@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.1](https://github.com/AlexAsAService/Pulper/compare/v0.1.0...v0.1.1) (2026-05-09)
+
+
+### Bug Fixes
+
+* use short git sha for docker image tags and update bake registry configuration ([b57203f](https://github.com/AlexAsAService/Pulper/commit/b57203f1ad829b3f79afe640a009541831cc8989))
+* use short git sha for docker image tags and update bake registry configuration ([1d6821c](https://github.com/AlexAsAService/Pulper/commit/1d6821cb5a6c5461063c3e7886f77fc8d53b8fa2))
+* use short git sha for docker image tags and update bake registry… ([7fdae8a](https://github.com/AlexAsAService/Pulper/commit/7fdae8affc5d7ce7740277f51d0c016f583077bc))
+* use short git sha for docker image tags and update bake registry… ([799b78a](https://github.com/AlexAsAService/Pulper/commit/799b78a78bcabca2cc8892065d1522fa73d33f98))
+
 ## 0.1.0 (2026-05-08)
 
 
