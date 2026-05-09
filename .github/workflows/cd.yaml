@@ -37,6 +37,9 @@ jobs:
 
       - name: Determine Version and Mode
         id: version
+        shell: bash
+        env:
+          GIT_SHA: ${{ github.sha }}
         run: |
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
             # Keep the v prefix for image tags: e.g. v0.1.0
@@ -44,7 +47,7 @@ jobs:
             echo "val=${VERSION}" >> $GITHUB_OUTPUT
             echo "mode=retag" >> $GITHUB_OUTPUT
           else
-            echo "val=latest" >> $GITHUB_OUTPUT
+            echo "val=sha-${GIT_SHA}" >> $GITHUB_OUTPUT
             echo "mode=build" >> $GITHUB_OUTPUT
           fi
 
@@ -52,19 +55,20 @@ jobs:
       # This promotes the exact image that CI validated — no rebuild.
       - name: Retag SHA images with version
         if: steps.version.outputs.mode == 'retag'
+        shell: bash
         env:
           OWNER: ${{ steps.owner.outputs.lower }}
           VERSION: ${{ steps.version.outputs.val }}
-          SHA: ${{ github.sha }}
+          GIT_SHA: ${{ github.sha }}
         run: |
-          SHA_TAG="sha-${SHA}"
+          GIT_SHA_TAG="sha-${GIT_SHA}"
           for REPO in pulper pulper-lite; do
             docker buildx imagetools create \
               -t "${REGISTRY}/${OWNER}/${REPO}:${VERSION}" \
-              "${REGISTRY}/${OWNER}/${REPO}:${SHA_TAG}"
+              "${REGISTRY}/${OWNER}/${REPO}:${GIT_SHA_TAG}"
             docker buildx imagetools create \
               -t "${REGISTRY}/${OWNER}/${REPO}:${VERSION}-no-shim" \
-              "${REGISTRY}/${OWNER}/${REPO}:${SHA_TAG}-no-shim"
+              "${REGISTRY}/${OWNER}/${REPO}:${GIT_SHA_TAG}-no-shim"
           done
 
 
@@ -74,7 +78,8 @@ jobs:
         uses: docker/bake-action@a66e1c87e2eca0503c343edf1d208c716d54b8a8 # v7
         env:
           TAG: ${{ steps.version.outputs.val }}
-          REGISTRY: ${{ env.REGISTRY }}/${{ steps.owner.outputs.lower }}
+          REGISTRY: ${{ env.REGISTRY }}
+          REPO_OWNER: ${{ steps.owner.outputs.lower }}
         with:
           push: true
           set: |
