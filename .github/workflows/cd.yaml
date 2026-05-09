@@ -4,7 +4,6 @@ on:
   push:
     branches: [ main ]
     tags: [ 'v*' ]
-  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -41,6 +40,7 @@ jobs:
         env:
           GIT_SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
             # Keep the v prefix for image tags: e.g. v0.1.0
             VERSION="${GITHUB_REF#refs/tags/}"
@@ -50,27 +50,6 @@ jobs:
             echo "val=sha-${GIT_SHA}" >> $GITHUB_OUTPUT
             echo "mode=build" >> $GITHUB_OUTPUT
           fi
-
-      # On a version tag: copy the SHA-tagged images to the version tag.
-      # This promotes the exact image that CI validated — no rebuild.
-      - name: Retag SHA images with version
-        if: steps.version.outputs.mode == 'retag'
-        shell: bash
-        env:
-          OWNER: ${{ steps.owner.outputs.lower }}
-          VERSION: ${{ steps.version.outputs.val }}
-          GIT_SHA: ${{ github.sha }}
-        run: |
-          GIT_SHA_TAG="sha-${GIT_SHA}"
-          for REPO in pulper pulper-lite; do
-            docker buildx imagetools create \
-              -t "${REGISTRY}/${OWNER}/${REPO}:${VERSION}" \
-              "${REGISTRY}/${OWNER}/${REPO}:${GIT_SHA_TAG}"
-            docker buildx imagetools create \
-              -t "${REGISTRY}/${OWNER}/${REPO}:${VERSION}-no-shim" \
-              "${REGISTRY}/${OWNER}/${REPO}:${GIT_SHA_TAG}-no-shim"
-          done
-
 
       # On main / dispatch: build and push all targets with bake.
       - name: Build and Push (Bake)
@@ -85,3 +64,31 @@ jobs:
           set: |
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
+
+      # On a version tag: copy the SHA-tagged images to the version tag.
+      # This promotes the exact image that CI validated — no rebuild.
+      - name: Retag SHA images with version
+        if: steps.version.outputs.mode == 'retag'
+        shell: bash
+        env:
+          OWNER: ${{ steps.owner.outputs.lower }}
+          VERSION: ${{ steps.version.outputs.val }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          GIT_SHA_TAG="sha-${GIT_SHA}"
+          for REPO in pulper pulper-lite; do
+            docker buildx imagetools create \
+              -t "${REGISTRY}/${OWNER}/${REPO}:${VERSION}" \
+              "${REGISTRY}/${OWNER}/${REPO}:${GIT_SHA_TAG}"
+            docker buildx imagetools create \
+              -t "${REGISTRY}/${OWNER}/${REPO}:${VERSION}-no-shim" \
+              "${REGISTRY}/${OWNER}/${REPO}:${GIT_SHA_TAG}-no-shim"
+          done
+
+      - name: Release Please
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
