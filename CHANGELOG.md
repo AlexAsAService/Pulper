@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/AlexAsAService/Pulper/compare/v0.1.1...v0.1.2) (2026-05-09)
+
+
+### Bug Fixes
+
+* find something to change ([#13](https://github.com/AlexAsAService/Pulper/issues/13)) ([d9e534d](https://github.com/AlexAsAService/Pulper/commit/d9e534d624c1485bd21d13657d4ea1ca840c14f0))
+
 ## [0.1.1](https://github.com/AlexAsAService/Pulper/compare/v0.1.0...v0.1.1) (2026-05-09)
 
 
