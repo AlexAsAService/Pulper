@@ -95,6 +95,7 @@ jobs:
           VARIANT: ${{ matrix.variant }}
           GYMNASTICS: ${{ matrix.gymnastics }}
         run: |
+          set -euo pipefail
           # Map flavor to image repo name
           REPO="pulper"
           if [[ "$FLAVOR" == "pulper-lite" ]]; then
