@@ -3,88 +3,17 @@ name: CD
 on:
   push:
     branches: [ main ]
-    tags: [ 'v*' ]
-
-env:
-  REGISTRY: ghcr.io
 
 jobs:
-  publish:
-    name: Publish Images
+  release:
+    name: Trigger Release
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      packages: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Normalize Registry Owner
-        id: owner
-        run: echo "lower=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
-
-      - name: Log in to registry
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
-
-      - name: Determine Version and Mode
-        id: version
-        shell: bash
-        env:
-          GIT_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            # Keep the v prefix for image tags: e.g. v0.1.0
-            VERSION="${GITHUB_REF#refs/tags/}"
-            echo "val=${VERSION}" >> $GITHUB_OUTPUT
-            echo "mode=retag" >> $GITHUB_OUTPUT
-          else
-            echo "val=sha-${GIT_SHA}" >> $GITHUB_OUTPUT
-            echo "mode=build" >> $GITHUB_OUTPUT
-          fi
-
-      # On main / dispatch: build and push all targets with bake.
-      - name: Build and Push (Bake)
-        if: steps.version.outputs.mode == 'build'
-        uses: docker/bake-action@a66e1c87e2eca0503c343edf1d208c716d54b8a8 # v7
-        env:
-          TAG: ${{ steps.version.outputs.val }}
-          REGISTRY: ${{ env.REGISTRY }}
-          REPO_OWNER: ${{ steps.owner.outputs.lower }}
-        with:
-          push: true
-          set: |
-            *.cache-from=type=gha
-            *.cache-to=type=gha,mode=max
-
-      # On a version tag: copy the SHA-tagged images to the version tag.
-      # This promotes the exact image that CI validated — no rebuild.
-      - name: Retag SHA images with version
-        if: steps.version.outputs.mode == 'retag'
-        shell: bash
-        env:
-          OWNER: ${{ steps.owner.outputs.lower }}
-          VERSION: ${{ steps.version.outputs.val }}
-          GIT_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          GIT_SHA_TAG="sha-${GIT_SHA}"
-          for REPO in pulper pulper-lite; do
-            docker buildx imagetools create \
-              -t "${REGISTRY}/${OWNER}/${REPO}:${VERSION}" \
-              "${REGISTRY}/${OWNER}/${REPO}:${GIT_SHA_TAG}"
-            docker buildx imagetools create \
-              -t "${REGISTRY}/${OWNER}/${REPO}:${VERSION}-no-shim" \
-              "${REGISTRY}/${OWNER}/${REPO}:${GIT_SHA_TAG}-no-shim"
-          done
 
       - name: Release Please
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
