@@ -18,6 +18,8 @@ jobs:
   build:
     name: Build Images
     runs-on: ubuntu-24.04
+    outputs:
+      registry: ${{ steps.info.outputs.registry }}
     permissions:
       contents: read
       packages: write
@@ -25,6 +27,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Info
+        id: info
+        run: echo "registry=${{ env.REGISTRY }}" >> $GITHUB_OUTPUT
 
       - name: Log in to registry
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
@@ -54,73 +60,9 @@ jobs:
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
 
-  test:
-    name: Smoke Test
+  smoke-test:
+    name: Run Smoke Test
     needs: build
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        flavor: [pulper, pulper-lite]
-        variant: [shim, no-shim]
-        include:
-          - variant: no-shim
-            gymnastics: true
-          - variant: shim
-            gymnastics: false
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Log in to registry
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Normalize repo owner
-        id: repo_owner
-        uses: ./.github/actions/to-lower
-        with:
-          string: ${{ github.repository_owner }}
-
-      - name: Run Smoke Test
-        env:
-          OWNER: ${{ steps.repo_owner.outputs.lower-case }}
-          REGISTRY: ${{ env.REGISTRY }}
-          TAG: sha-${{ github.sha }}
-          FLAVOR: ${{ matrix.flavor }}
-          VARIANT: ${{ matrix.variant }}
-          GYMNASTICS: ${{ matrix.gymnastics }}
-        run: |
-          set -euo pipefail
-          # Map flavor to image repo name
-          REPO="pulper"
-          if [[ "$FLAVOR" == "pulper-lite" ]]; then
-            REPO="pulper-lite"
-          fi
-          
-          # Map variant to tag suffix
-          if [[ "$VARIANT" == "no-shim" ]]; then
-            TAG="${TAG}-no-shim"
-          fi
-          
-          export IMAGE="${REGISTRY}/${OWNER}/${REPO}:${TAG}"
-          
-          # Suppress ONNX runtime hardware discovery warnings in CI output
-          export DOCKER_OPTS="-e ORT_LOGGING_LEVEL=3 -e ONNXRUNTIME_LOG_SEVERITY_LEVEL=3"
-          if [[ "$GYMNASTICS" == "true" ]]; then
-            DOCKER_OPTS="$DOCKER_OPTS --user $(id -u):$(id -g) -e HOME=/tmp"
-          fi
-
-          # Set the fixtures stage based on the flavor
-          if [[ "$FLAVOR" == "pulper-lite" ]]; then
-            export FIXTURES_STAGE="minimal"
-          else
-            export FIXTURES_STAGE="full"
-          fi
-          
-          # Execute the smoke test
-          ./scripts/smoke.sh
+    uses: ./.github/workflows/lib.smoke-test.yml
+    with:
+      registry: ${{ needs.build.outputs.registry }}
