@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/AlexAsAService/Pulper/compare/v0.1.2...v0.2.0) (2026-05-10)
+
+
+### Features
+
+* modularize smoke test workflow into a reusable action ([#16](https://github.com/AlexAsAService/Pulper/issues/16)) ([6a25b8a](https://github.com/AlexAsAService/Pulper/commit/6a25b8ab44e99b60e7c3be758bbef82660edd03c))
+
 ## [0.1.2](https://github.com/AlexAsAService/Pulper/compare/v0.1.1...v0.1.2) (2026-05-09)
 
 
