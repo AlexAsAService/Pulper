@@ -16,7 +16,7 @@ Pulper provides a unified interface for converting a wide range of document type
 - **Audio Normalization**: Automatic processing of `.wav`, `.mp3`, `.m4a`, `.flac`, and `.ogg` via FFmpeg (standardized to 16kHz mono for optimal ingestion).
 
 ### How it works
-When you pass a file to Pulper, the internal classifier identifies the file type. If it's a legacy or media format that MarkItDown doesn't natively support, Pulper automatically transpiles it into a modern equivalent (like `.docx` or normalized `.wav`) in a temporary scratch space before final conversion.
+When you pass a file to Pulper, the internal classifier identifies the file type. If it's a legacy or media format that MarkItDown doesn't natively support, Pulper automatically converts it into a modern equivalent (like `.docx` or normalized `.wav`) in a temporary scratch space before final conversion.
 
 ---
 
@@ -38,7 +38,7 @@ Images are hosted on the GitHub Container Registry (GHCR).
 Pulper is offered in two main flavors: **Pulper** (Full) and **Pulper-Lite**.
 
 - **Pulper**: Includes the full suite of conversion tools (LibreOffice, FFmpeg).
-- **Pulper-Lite**: A lightweight image focused on modern document formats. It lacks legacy transpilers; if a legacy file is detected, the classifier will log a warning and pass the original file to MarkItDown, which will likely result in a conversion error.
+- **Pulper-Lite**: A lightweight image focused on modern document formats. It lacks legacy converters; if a legacy file is detected, the classifier will log a warning and pass the original file to MarkItDown, which will likely result in a conversion error.
 
 ---
 
@@ -47,12 +47,12 @@ Pulper is offered in two main flavors: **Pulper** (Full) and **Pulper-Lite**.
 Pulper is designed for rootless execution, but the configuration depends on your orchestration environment.
 
 ### The Shim (Recommended for Local Dev)
-Images tagged `latest` include a lightweight Bash shim.
+Images tagged `latest` or `vX.Y.Z` include a lightweight Bash shim.
 - **Mechanism**: The container starts as `root` to map the internal `pulper` user to the UID/GID that owns your mounted volumes, then drops privileges.
 - **Benefit**: This ensures that files written to your host `/output` folder are owned by the same user who owns the host directory, avoiding permission conflicts without manual configuration.
 
 ### No-Shim (`latest-no-shim`)
-Images tagged `latest-no-shim` lack the entrypoint wrapper and run as a non-privileged user named `pulper` by default.
+Images tagged `latest-no-shim` or `vX.Y.Z-no-shim` lack the entrypoint wrapper and run as a non-privileged user named `pulper` by default.
 - **Mechanism**: Defaults to UID/GID `9999`. 
 - **Usage**: In Docker, you should use the `--user` flag to map the execution to the UID/GID that owns your input/output directories. (Other orchestrators like Kubernetes handle this via security contexts).
 - **Complexity with Full Version**: While **Pulper-Lite** is easy to run in `no-shim` mode, the **Full** version requires significant effort. LibreOffice requires a writable `$HOME` directory to initialize its user profile. Since the default home directory in the image is owned by UID `9999`, overriding the user via `--user` will break LibreOffice's ability to write there. You must manually provide a writable path (e.g., `-e HOME=/tmp`) for the conversion tools to function. 
@@ -72,12 +72,33 @@ docker run --rm \
   /input/report.doc -o /output/report.md
 ```
 
+### Pulper (Full) with No-Shim
+```bash
+docker run --rm \
+  -v "$PWD/input:/input:ro" \
+  -v "$PWD/output:/output" \
+  --user $(id -u):$(id -g) \
+  -e HOME=/tmp \
+  ghcr.io/alexasaservice/pulper:latest-no-shim \
+  /input/report.doc -o /output/report.md
+```
+
+### Pulper-Lite with Shim
+```bash
+docker run --rm \
+  -v "$PWD/input:/input:ro" \
+  -v "$PWD/output:/output" \
+  ghcr.io/alexasaservice/pulper-lite:latest \
+  /input/data.docx -o /output/data.md
+```
+
 ### Pulper-Lite with No-Shim
 ```bash
 docker run --rm \
   -v "$PWD/input:/input:ro" \
   -v "$PWD/output:/output" \
   --user $(id -u):$(id -g) \
+  -e HOME=/tmp \
   ghcr.io/alexasaservice/pulper-lite:latest-no-shim \
   /input/data.docx -o /output/data.md
 ```
@@ -91,8 +112,14 @@ docker run --rm \
 # Build the full version
 STAGE=full-shim docker compose build
 
+# Build the full version (no shim)
+STAGE=full-no-shim docker compose build
+
 # Build the lite version
 STAGE=minimal-shim docker compose build
+
+# Build the lite version (no shim)
+STAGE=minimal-no-shim docker compose build
 ```
 
 ### Testing
