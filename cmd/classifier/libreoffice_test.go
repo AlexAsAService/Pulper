@@ -6,18 +6,16 @@ import (
 	"testing"
 )
 
-
-
-func TestLibreOfficeTranspiler_DepsMissing(t *testing.T) {
+func TestLibreOfficeConverter_DepsMissing(t *testing.T) {
 	mockExec := &MockExecutor{
 		LookPathFunc: func(file string) (string, error) {
 			return "", errors.New("command not found")
 		},
 	}
-	transpiler := NewLibreOfficeTranspiler(mockExec)
+	converter := NewLibreOfficeConverter(mockExec)
 
-	_, err := transpiler.Transpile("test.doc")
-	
+	_, err := converter.Convert("test.doc")
+
 	if !errors.Is(err, ErrDepsMissing) {
 		t.Errorf("Expected ErrDepsMissing, got: %v", err)
 	}
@@ -26,17 +24,17 @@ func TestLibreOfficeTranspiler_DepsMissing(t *testing.T) {
 	}
 }
 
-func TestLibreOfficeTranspiler_Success(t *testing.T) {
+func TestLibreOfficeConverter_Success(t *testing.T) {
 	mockExec := &MockExecutor{}
-	transpiler := NewLibreOfficeTranspiler(mockExec)
+	converter := NewLibreOfficeConverter(mockExec)
 
 	// Since we mock success, we don't care that the temp output file won't exist
-	_, err := transpiler.Transpile("test.doc")
-	
+	_, err := converter.Convert("test.doc")
+
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	
+
 	if len(mockExec.Commands) != 1 {
 		t.Fatalf("Expected exactly 1 command to run, got %d", len(mockExec.Commands))
 	}
@@ -48,16 +46,16 @@ func TestLibreOfficeTranspiler_Success(t *testing.T) {
 	}
 }
 
-func TestLibreOfficeTranspiler_RunError(t *testing.T) {
+func TestLibreOfficeConverter_RunError(t *testing.T) {
 	mockExec := &MockExecutor{
 		RunFunc: func(name string, arg ...string) ([]byte, error) {
 			return []byte("segfault"), errors.New("exit status 1")
 		},
 	}
-	transpiler := NewLibreOfficeTranspiler(mockExec)
+	converter := NewLibreOfficeConverter(mockExec)
 
-	_, err := transpiler.Transpile("test.doc")
-	
+	_, err := converter.Convert("test.doc")
+
 	if err == nil {
 		t.Fatal("Expected an error from soffice crash, got nil")
 	}

@@ -6,49 +6,49 @@ import (
 	"strings"
 )
 
-type LibreOfficeTranspiler struct {
+type LibreOfficeConverter struct {
 	state    DepState
 	executor Executor
 }
 
-func NewLibreOfficeTranspiler(exec Executor) *LibreOfficeTranspiler {
+func NewLibreOfficeConverter(exec Executor) *LibreOfficeConverter {
 	if exec == nil {
 		exec = DefaultExecutor{}
 	}
-	return &LibreOfficeTranspiler{state: StateUnknown, executor: exec}
+	return &LibreOfficeConverter{state: StateUnknown, executor: exec}
 }
 
-func (t *LibreOfficeTranspiler) Name() string {
+func (c *LibreOfficeConverter) Name() string {
 	return "LibreOffice"
 }
 
-func (t *LibreOfficeTranspiler) Extensions() []string {
+func (c *LibreOfficeConverter) Extensions() []string {
 	return []string{".doc", ".odt", ".rtf", ".xls", ".ods", ".ppt", ".odp"}
 }
 
-func (t *LibreOfficeTranspiler) checkDeps() {
-	if _, err := t.executor.LookPath("soffice"); err == nil {
-		t.state = StateInstalled
+func (c *LibreOfficeConverter) checkDeps() {
+	if _, err := c.executor.LookPath("soffice"); err == nil {
+		c.state = StateInstalled
 	} else {
-		t.state = StateMissing
+		c.state = StateMissing
 	}
 }
 
-func (t *LibreOfficeTranspiler) Transpile(inputPath string) (string, error) {
-	if t.state == StateUnknown {
-		t.checkDeps()
+func (c *LibreOfficeConverter) Convert(inputPath string) (string, error) {
+	if c.state == StateUnknown {
+		c.checkDeps()
 	}
-	if t.state == StateMissing {
+	if c.state == StateMissing {
 		return "", ErrDepsMissing
 	}
 
-	targetExt := t.getTargetExt(inputPath)
+	targetExt := c.getTargetExt(inputPath)
 
 	// CLI Arguments:
 	// --headless: Runs LibreOffice without a graphical user interface (required for background/container processing).
 	// --convert-to [ext]: Tells LibreOffice to convert the input document to the specified output format.
 	// --outdir [dir]: LibreOffice requires an output directory rather than a specific output filename. It places the converted file here.
-	if out, err := t.executor.Run("soffice", "--headless", "--convert-to", targetExt, "--outdir", AppConfig.ScratchDir, inputPath); err != nil {
+	if out, err := c.executor.Run("soffice", "--headless", "--convert-to", targetExt, "--outdir", AppConfig.ScratchDir, inputPath); err != nil {
 		return "", fmt.Errorf("soffice failed: %w\nOutput: %s", err, string(out))
 	}
 
@@ -60,7 +60,7 @@ func (t *LibreOfficeTranspiler) Transpile(inputPath string) (string, error) {
 	return convertedFile, nil
 }
 
-func (t *LibreOfficeTranspiler) getTargetExt(inputPath string) string {
+func (c *LibreOfficeConverter) getTargetExt(inputPath string) string {
 	ext := strings.ToLower(filepath.Ext(inputPath))
 	switch ext {
 	case ".doc", ".odt", ".rtf":
