@@ -22,10 +22,10 @@ func (d DefaultExecutor) Run(name string, arg ...string) ([]byte, error) {
 	return exec.Command(name, arg...).CombinedOutput()
 }
 
-// ErrDepsMissing is returned when a transpiler is asked to run but lacks required system tools.
+// ErrDepsMissing is returned when a converter is asked to run but lacks required system tools.
 var ErrDepsMissing = errors.New("required dependencies are not installed")
 
-// DepState represents the cached state of a transpiler's required system dependencies.
+// DepState represents the cached state of a converter's required system dependencies.
 type DepState int
 
 const (
@@ -34,13 +34,13 @@ const (
 	StateMissing
 )
 
-// Transpiler defines the interface for any capability that can transform a file.
-type Transpiler interface {
-	// Extensions returns a list of file extensions this transpiler handles (e.g., []string{".doc", ".rtf"}).
+// Converter defines the interface for any capability that can convert a file to another format.
+type Converter interface {
+	// Extensions returns a list of file extensions this converter handles (e.g., []string{".doc", ".rtf"}).
 	Extensions() []string
-	// Transpile performs the conversion. It checks dependencies lazily on first run.
-	// It returns the path to the newly transpiled file, which is then passed to MarkItDown.
-	Transpile(inputPath string) (string, error)
-	// Name returns the name of the transpiler (for logging).
+	// Convert performs the format conversion. It checks dependencies lazily on first run.
+	// It returns the path to the newly converted file, which is then passed to MarkItDown.
+	Convert(inputPath string) (string, error)
+	// Name returns the name of the converter (for logging).
 	Name() string
 }

@@ -2,7 +2,7 @@
 
 **Professional, containerized document-to-Markdown conversion.**
 
-Pulper is a containerization of Microsoft [MarkItDown](https://github.com/microsoft/markitdown), designed to turn complex source documents into clean, AI-ready Markdown. It abstracts away the dependency requirements for OCR, media processing, and document transpilation into a portable CLI interface.
+Pulper is a containerization of Microsoft [MarkItDown](https://github.com/microsoft/markitdown), designed to turn complex source documents into clean, AI-ready Markdown. It abstracts away the dependency requirements for OCR, media processing, and document conversion into a portable CLI interface.
 
 ---
 
@@ -38,7 +38,7 @@ Images are hosted on the GitHub Container Registry (GHCR).
 Pulper is offered in two main flavors: **Pulper** (Full) and **Pulper-Lite**.
 
 - **Pulper**: Includes the full suite of conversion tools (LibreOffice, FFmpeg).
-- **Pulper-Lite**: A lightweight image focused on modern document formats. It lacks legacy converters; if a legacy file is detected, the classifier will log a warning and pass the original file to MarkItDown, which will likely result in a conversion error.
+- **Pulper-Lite**: A lightweight image focused on modern document formats. It lacks legacy format converters; if a legacy file is detected, the classifier will log a warning and pass the original file to MarkItDown, which will likely result in a conversion error.
 
 ---
 

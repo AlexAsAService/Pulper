@@ -11,11 +11,11 @@ import (
 )
 
 func main() {
-	// 1. Initialize transpilers
+	// 1. Initialize converters
 	executor := DefaultExecutor{}
-	transpilers := []Transpiler{
-		NewLibreOfficeTranspiler(executor),
-		NewFFmpegTranspiler(executor),
+	converters := []Converter{
+		NewLibreOfficeConverter(executor),
+		NewFFmpegConverter(executor),
 	}
 
 	// 2. Fail fast if markitdown is missing
@@ -30,14 +30,14 @@ func main() {
 	defer AppConfig.Cleanup()
 
 	// 4. Build the centralized capabilities map
-	extMap := make(map[string]Transpiler)
-	for _, t := range transpilers {
-		for _, ext := range t.Extensions() {
+	extMap := make(map[string]Converter)
+	for _, c := range converters {
+		for _, ext := range c.Extensions() {
 			if existing, ok := extMap[ext]; ok {
-				fmt.Printf("Error: Transpiler overlap detected for extension %s between %s and %s\n", ext, existing.Name(), t.Name())
+				fmt.Printf("Error: Converter overlap detected for extension %s between %s and %s\n", ext, existing.Name(), c.Name())
 				os.Exit(1)
 			}
-			extMap[ext] = t
+			extMap[ext] = c
 		}
 	}
 
@@ -60,22 +60,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 6. Transpilation Logic
+	// 6. Conversion Logic
 	finalPath := inputPath
 	ext := strings.ToLower(filepath.Ext(inputPath))
 
-	if t, ok := extMap[ext]; ok {
-		fmt.Printf("Routing %s to %s transpiler...\n", filepath.Base(inputPath), t.Name())
-		newPath, err := t.Transpile(inputPath)
+	if c, ok := extMap[ext]; ok {
+		fmt.Printf("Routing %s to %s converter...\n", filepath.Base(inputPath), c.Name())
+		newPath, err := c.Convert(inputPath)
 		if err != nil {
 			if errors.Is(err, ErrDepsMissing) {
-				fmt.Printf("  -> [SKIP] %s dependencies missing. Falling back to native MarkItDown.\n", t.Name())
+				fmt.Printf("  -> [SKIP] %s dependencies missing. Falling back to native MarkItDown.\n", c.Name())
 			} else {
-				fmt.Printf("  -> [ERROR] Transpilation failed: %v\n", err)
+				fmt.Printf("  -> [ERROR] Conversion failed: %v\n", err)
 				os.Exit(1)
 			}
 		} else {
-			fmt.Printf("  -> [SUCCESS] Transpiled intermediate file: %s\n", filepath.Base(newPath))
+			fmt.Printf("  -> [SUCCESS] Converted intermediate file: %s\n", filepath.Base(newPath))
 			finalPath = newPath
 		}
 	}
